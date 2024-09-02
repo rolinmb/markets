@@ -26,7 +26,7 @@ struct OptionExpiry {
 
 struct OptionChain {
     expiries: Vec<OptionExpiry>,
-    ticekr: String,
+    ticker: String,
     current_price: f64,
     div_yield: f64,
 }
@@ -41,6 +41,10 @@ fn rand_int_range(min: u64, max: u64) -> u64 {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     rng.gen_range(min..=max)
+}
+
+fn remove_ordinal_suffix(s: &str) -> String {
+    s.trim_end_matches(|c: char| c.is_ascii_alphabetic()).to_string()
 }
 
 #[tokio::main]
@@ -103,13 +107,112 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     let final_sleep = Duration::from_millis(rand_int_range(100000, 110000));
     println!("\nget_optionchain() :: All HTML page toggles completed; sleeping {:?}", final_sleep);
     sleep(final_sleep).await;
-    /*let rows = page
+    let rows = page
         .query_selector_all("table.optionchain tr.chainrow")
         .await
-        .context("\nget_optionchain() :: Could not get option chain HTML table rows")?;*/
+        .context("\nget_optionchain() :: Could not get option chain HTML table rows")?;
     // TODO: Parse the HTML for the option chain data then write to csv_name when finished
-
-    browser.close().await?;
-    //println!("\nget_optionchain() :: Successfully created {} with option chain data for {}", csv_name, ticker);
+    let mut chain = OptionChain {
+        expiries: Vec::new(),
+        ticker: ticker.to_string(),
+        current_price: current_price,
+        div_yield: yield_val,
+    };
+    let mut expiry = OptionExpiry {
+        date: "".to_string(),
+        yte: 0.0,
+        calls: Vec::new(),
+        puts: Vec::new(),
+    };
+    let current_time = chrono::Utc::now();
+    let mut current_exp_date = "".to_string();
+    let mut current_yte = 0.0;
+    for tr in rows {
+        let tr_text = tr.text_content().await.unwrap_or_default().expect("\nget_optionchain() :: ERROR ").trim().to_string();
+        if tr_text.is_empty() || tr_text.contains("Stock Price »") || tr_text.contains("CALLS") || tr_text.contains("Last") || tr_text.contains("Show") {
+            continue;
+        }
+        if tr_text.contains("Expires") {
+            let date_fields: Vec<&str> = tr_text.split_whitespace().collect();
+            if date_fields.len() < 4 {
+                continue;
+            }
+            let mut cleaned_day = remove_ordinal_suffix(date_fields[1]);
+            cleaned_day = cleaned_day.replace(",", "");
+            let new_exp_date = format!("{} {} {}", &date_fields[0], cleaned_day, date_fields[2]);
+            let parsed_time = chrono::NaiveDate::parse_from_str(&new_exp_date, "%b %d %Y")
+                .context(format!("\nget_optionchain() :: ERROR -> A problem occured parsing new_exp_date '{}'", new_exp_date))?;
+            let parsed_datetime = chrono::DateTime::<chrono::Utc>::from_utc(parsed_time.into(), chrono::Utc);
+            let duration = current_time.signed_duration_since(parsed_datetime);
+            let new_yte = (duration.num_hours().abs() as f64) / 24.0 / 252.0;
+            if !current_exp_date.is_empty() && current_exp_date != new_exp_date {
+                expiry.date = current_exp_date.clone();
+                expiry.yte = current_yte;
+                chain.expiries.push(expiry);
+                expiry = OptionExpiry {
+                    date: "".to_string(),
+                    yte: 0.0,
+                    calls: Vec::new(),
+                    puts: Vec::new(),
+                };
+                println!("\nget_optionchain() :: Finished parsing expiration date {} (yte = {:.3})", current_exp_date, current_yte);
+            }
+            current_exp_date = new_exp_date;
+            current_yte = new_yte;
+            continue;
+        }
+        let td_cells = tr.query_selector_all("td").await?;
+        let mut tr_data: Vec<f64> = Vec::new();
+        for td in td_cells {
+            let td_text = td.text_content().await.unwrap_or_default().expect("\nget_optionchain() :: ERROR ").trim().to_string();
+            if td_text.is_empty() {
+                tr_data.push(0.0);
+                continue;
+            }
+            let mut num = 0.0;
+            if let Some(first_field) = td_text.split_whitespace().next() {
+                let cleaned_num = first_field.replace(",", "");
+                num = cleaned_num.parse::<f64>().unwrap_or(0.0);
+            }
+            tr_data.push(num);
+        }
+        if tr_data.len() < 13 {
+            continue;
+        }
+        let call = Option {
+            last: tr_data[0],
+            change: tr_data[1],
+            vol: tr_data[2],
+            bid: tr_data[3],
+            ask: tr_data[4],
+            open_int: tr_data[5],
+            strike: tr_data[6],
+            yte: current_yte,
+            is_call: true,
+        };
+        let put = Option {
+            last: tr_data[7],
+            change: tr_data[8],
+            vol: tr_data[9],
+            bid: tr_data[10],
+            ask: tr_data[11],
+            open_int: tr_data[12],
+            strike: tr_data[6],
+            yte: current_yte,
+            is_call: false,
+        };
+        expiry.calls.push(call);
+        expiry.puts.push(put);
+    }
+    if !current_exp_date.is_empty() && !expiry.calls.is_empty() {
+        expiry.date = current_exp_date.clone();
+        expiry.yte = current_yte;
+        chain.expiries.push(expiry);
+    }
+    browser.close()
+        .await
+        .context("\nget_optionchain() :: ERROR -> Could not close playwright chromium browser")?;
+    // TODO: Implement saving option chain data as csv file
+    println!("\nget_optionchain() :: Successfully created {} with option chain data for {}", csv_name, ticker);
     Ok(())
 }
