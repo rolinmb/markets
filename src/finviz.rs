@@ -9,18 +9,18 @@ use std::collections::{HashMap, HashSet};
 const URLP1: &str = "https://www.finviz.com/quote.ashx?t=";
 const URLP2: &str = "&p=d";
 
-fn fetch_html(url: &str) -> Result<String, Error> {
+pub fn fetch_html(url: &str) -> Result<String, Error> {
     let response = reqwest::blocking::get(url)?.text()?;
     Ok(response)
 }
 
-fn parse_html_table(html: &str) -> Result<Vec<(String, String)>, Box<dyn StdError>> {
+fn parse_fv_html_table(html: &str) -> Result<Vec<(String, String)>, Box<dyn StdError>> {
     let mut data = Vec::new();
     for tr in Document::from(html)
         .find(Class("js-snapshot-table"))
         .filter(|n| n.attr("class").unwrap_or("").contains("snapshot-table2"))
         .filter(|n| n.attr("class").unwrap_or("").contains("screener_snapshot-table-body")) {
-        //println!("parse_html_table() :: \n<tr>{}</tr>\n", tr.html());
+        //println!("parse_fv_html_table() :: \n<tr>{}</tr>\n", tr.html());
         let mut i = 0;
         let mut label = String::new();
         for td in tr.find(Name("td")) {
@@ -122,15 +122,14 @@ fn compute_additional_financials(data: &HashMap<String, String>) -> HashMap<Stri
 }
 
 pub fn fetch_finviz_info(ticker: &str, csv_name: &str) -> Result<(), Box<dyn StdError>> {
-    let ticker = ticker.to_uppercase();
     let mut all_data: HashMap<String, HashMap<String, String>> = HashMap::new();
     let mut all_labels: HashSet<String> = HashSet::new();
     let full_url = format!("{}{}{}", URLP1, ticker, URLP2);
     println!("\nfetch_finviz_info() :: Fetching HTML from finviz.com for {}", ticker);
     match fetch_html(&full_url) {
         Ok(full_html) => {
-            println!("\nfetch_finviz_info() :: Successfully fetched finviz.com HTML for {}", ticker);
-            match parse_html_table(&full_html) {
+            println!("\nfetch_finviz_info() :: Successfully fetched HTML from finviz.com for {}", ticker);
+            match parse_fv_html_table(&full_html) {
                 Ok(data) => {
                     let data_map: HashMap<String, String> = data.into_iter().collect();
                     let af = compute_additional_financials(&data_map);
@@ -139,7 +138,7 @@ pub fn fetch_finviz_info(ticker: &str, csv_name: &str) -> Result<(), Box<dyn Std
                     for key in combined_data.keys() {
                         all_labels.insert(key.clone());
                     }
-                    all_data.insert(ticker.clone(), combined_data);
+                    all_data.insert(ticker.to_string(), combined_data);
                 },
                 Err(e) => {
                     eprintln!("\nfetch_finviz_info() :: ERROR -> Failed to parse finviz.com HTML table for {}: {}", ticker, e);
@@ -154,12 +153,12 @@ pub fn fetch_finviz_info(ticker: &str, csv_name: &str) -> Result<(), Box<dyn Std
     }
     let mut writer = Writer::from_writer(File::create(csv_name)?);
     let mut headers = vec!["Label".to_string()];
-    headers.push(ticker.clone());
+    headers.push(ticker.to_string());
     writer.write_record(&headers)?;
     for label in &all_labels {
         let mut record = vec![label.clone()];
         let value = all_data
-            .get(&ticker)
+            .get(ticker)
             .and_then(|data| data.get(label))
             .cloned()
             .unwrap_or_else(|| "N/A".to_string());
