@@ -124,9 +124,9 @@ fn compute_additional_financials(data: &HashMap<String, String>) -> HashMap<Stri
 pub fn fetch_finviz_info(ticker: &str, csv_name: &str) -> Result<(), Box<dyn StdError>> {
     let mut all_data: HashMap<String, HashMap<String, String>> = HashMap::new();
     let mut all_labels: HashSet<String> = HashSet::new();
-    let full_url = format!("{}{}{}", URLP1, ticker, URLP2);
+    let fv_url = format!("{}{}{}", URLP1, ticker, URLP2);
     println!("\nfetch_finviz_info() :: Fetching HTML from finviz.com for {}", ticker);
-    match fetch_html(&full_url) {
+    match fetch_html(&fv_url) {
         Ok(full_html) => {
             println!("\nfetch_finviz_info() :: Successfully fetched HTML from finviz.com for {}", ticker);
             match parse_fv_html_table(&full_html) {

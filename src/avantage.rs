@@ -272,7 +272,7 @@ pub fn get_underlying_av(ticker: &str, csv_name: &str) -> Result<(), Box<dyn Std
         return Ok(());
     }
     let api_url = format!("{}{}&outputsize=full&apikey={}", AVBASEURL, ticker, avkey);
-    println!("\nfetch_finviz_info() :: Fetching JSON from Alpha Vantage API for {}", ticker);
+    println!("\nget_underlying_av() :: Fetching JSON from Alpha Vantage API for {}", ticker);
     let response = reqwest::blocking::get(&api_url)?;
     let t_series: TimeSeries = response.json()?;
     if t_series.meta_data.last_refreshed.is_empty() {
@@ -281,6 +281,6 @@ pub fn get_underlying_av(ticker: &str, csv_name: &str) -> Result<(), Box<dyn Std
     }
     println!("\nget_underlying_av() :: Successfully fetched JSON OHLCV data from Alpha Vantage for {}", ticker);
     let _ = tseries_to_csv(&t_series, csv_name);
-    println!("\ntseries_to_csv() :: Successfully created {} with time series data for {}", csv_name, ticker);
+    println!("\nget_underlying_av() :: Successfully created {} with time series data for {}", csv_name, ticker);
     Ok(())
 }

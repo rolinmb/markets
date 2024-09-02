@@ -1,7 +1,7 @@
-mod finviz;
+/*mod finviz;
 use finviz::{fetch_finviz_info};
 mod avantage;
-use avantage::{get_underlying_av};
+use avantage::{get_underlying_av};*/
 mod options;
 use options::{get_optionchain};
 use chrono::Local;
@@ -22,11 +22,11 @@ fn main() {
         let uticker = ticker.to_uppercase();
         let now = Local::now();
         let datetime_str = now.format("%Y-%m-%d_%H-%M-%S").to_string();
-        let fv_csv = format!("{}{}_fv_{}.csv", CSVDIR, uticker, datetime_str);
-        let av_csv = format!("{}{}_av_{}.csv", CSVDIR, uticker, datetime_str);
+        //let fv_csv = format!("{}{}_fv_{}.csv", CSVDIR, uticker, datetime_str);
+        //let av_csv = format!("{}{}_av_{}.csv", CSVDIR, uticker, datetime_str);
         let oc_csv = format!("{}{}_oc_{}.csv", CSVDIR, uticker, datetime_str);
-        let _ = fetch_finviz_info(&uticker, &fv_csv);
-        let _ = get_underlying_av(&uticker, &av_csv);
+        //let _ = fetch_finviz_info(&uticker, &fv_csv);
+        //let _ = get_underlying_av(&uticker, &av_csv);
         let _ = get_optionchain(&uticker, &oc_csv);
     } else {
         eprintln!("\nmain() :: ERROR -> Please enter a financial ticker/symbol that is at most 4 alphabetical characters; you entered '{}'", ticker);
