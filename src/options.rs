@@ -10,6 +10,7 @@ const OURLP1: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?s
 const OURLP2: &str = "&showAll=True";
 //const HTMLDIR: &str = "html_out/";
 
+#[derive(Debug)]
 struct Option {
     last: f64,
     change: f64,
@@ -22,6 +23,7 @@ struct Option {
     is_call: bool,
 }
 
+#[derive(Debug)]
 struct OptionExpiry {
     date: String,
     yte: f64,
@@ -29,6 +31,7 @@ struct OptionExpiry {
     puts: Vec<Option>,
 }
 
+#[derive(Debug)]
 struct OptionChain {
     expiries: Vec<OptionExpiry>,
     ticker: String,
@@ -239,6 +242,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
             eprintln!("\nget_optionchain() :: ERROR -> Insufficient data in tr_data by end of populating: {:?}", tr_data);
             continue;
         }
+        println!("\nget_optionchain() :: Exctracted <td> element data from <tr> row element: {:?}", tr_data);
         let call = Option {
             last: tr_data[0],
             change: tr_data[1],
@@ -274,7 +278,12 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     browser.close()
         .await
         .context("\nget_optionchain() :: ERROR -> Could not close playwright chromium browser")?;
-    chain.save_to_csv(csv_name)?;
-    println!("\nget_optionchain() :: Successfully created {} with option chain data for {}", csv_name, ticker);
+    if !chain.expiries.is_empty() {
+        println!("\nget_optionchain() :: Full OptionChain struct for {}: {:?}", ticker, chain);
+        chain.save_to_csv(csv_name)?;
+        println!("\nget_optionchain() :: Successfully created {} with option chain data for {}", csv_name, ticker);
+    } else {
+        eprintln!("\nget_optionchain() :: ERROR -> Unsuccessful at parsing HTML into OptionChain struct; no csv output to be made");
+    }
     Ok(())
 }
