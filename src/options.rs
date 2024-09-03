@@ -109,6 +109,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         .await
         .context("\nget_optionchain() :: ERROR -> Could not navigate to bigcharts.marketwatch.com")?;
     println!("\nget_optionchain() :: Successfully navigated to bigcharts.marketwatch.com for {}", ticker);
+    println!("\nget_optionchain() :: Page content before toggling: {}", page.content().await?);
     let price_str = page
         .query_selector(".fright .price")
         .await?
@@ -151,6 +152,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     let final_sleep = Duration::from_millis(rand_int_range(1000, 1500));
     println!("\nget_optionchain() :: All HTML page toggles completed; sleeping {:?} before continuing", final_sleep);
     sleep(final_sleep).await;
+    println!("\nget_optionchain() :: Page content after toggling and sleeping: {}", page.content().await?);
     // TODO: program stops working around here
     let rows = page
         .query_selector_all("table.optionchain tr.chainrow")
