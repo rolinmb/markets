@@ -109,7 +109,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         .await
         .context("\nget_optionchain() :: ERROR -> Could not navigate to bigcharts.marketwatch.com")?;
     println!("\nget_optionchain() :: Successfully navigated to bigcharts.marketwatch.com for {}", ticker);
-    println!("\nget_optionchain() :: Page content before toggling: {}", page.content().await?);
+    //println!("\nget_optionchain() :: Page content before toggling: {}", page.content().await?);
     let price_str = page
         .query_selector(".fright .price")
         .await?
@@ -136,7 +136,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     println!("\nget_optionchain() :: Current {} Price: ${:.2}; Dividend Yield: {:.4} ({}%)", ticker, current_price, yield_val, yield_display);
     let sleep_duration = Duration::from_millis(rand_int_range(1000, 2000));
     sleep(sleep_duration).await;
-    println!("\nget_optionchain() :: Sleeping {:?}", sleep_duration);
+    println!("\nget_optionchain() :: Sleeping {:?} before starting toggles", sleep_duration);
     let toggles = page
         .query_selector_all("table.optionchain tr.optiontoggle td.caption form.ajaxpartial")
         .await
@@ -149,10 +149,10 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
             sleep(sleep_dur).await;
         }
     }
-    let final_sleep = Duration::from_millis(rand_int_range(1000, 1500));
+    let final_sleep = Duration::from_millis(rand_int_range(10000, 15000));
     println!("\nget_optionchain() :: All HTML page toggles completed; sleeping {:?} before continuing", final_sleep);
     sleep(final_sleep).await;
-    println!("\nget_optionchain() :: Page content after toggling and sleeping: {}", page.content().await?);
+    //println!("\nget_optionchain() :: Page content after toggling and sleeping: {}", page.content().await?);
     // TODO: program stops working around here
     let rows = page
         .query_selector_all("table.optionchain tr.chainrow")
@@ -174,6 +174,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     let mut current_exp_date = "".to_string();
     let mut current_yte = 0.0;
     for tr in rows {
+        println!("\nget_optionchain() :: Processing <tr> element > {:?}", tr);
         let tr_text = tr.text_content().await.unwrap_or_default().expect("\nget_optionchain() :: ERROR ").trim().to_string();
         if tr_text.is_empty() || tr_text.contains("Stock Price »") || tr_text.contains("CALLS") || tr_text.contains("Last") || tr_text.contains("Show") {
             continue;
