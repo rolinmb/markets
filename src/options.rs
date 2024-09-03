@@ -144,16 +144,12 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     if toggles.len() > 1 {
         for (i, toggle) in toggles.into_iter().enumerate().skip(1) {
             toggle.click_builder().click().await.context("\nget_optionchain() :: ERROR -> Could not click toggle")?;
-            let sleep_dur = Duration::from_millis(rand_int_range(1500, 3000));
-            println!("\nget_optionchain() :: Toggle {} completed; sleeping {:?}", i, sleep_dur);
-            sleep(sleep_dur).await;
+            page.wait_for_load_state("networkidle");
         }
     }
-    let final_sleep = Duration::from_millis(rand_int_range(10000, 15000));
-    println!("\nget_optionchain() :: All HTML page toggles completed; sleeping {:?} before continuing", final_sleep);
-    sleep(final_sleep).await;
-    //println!("\nget_optionchain() :: Page content after toggling and sleeping: {}", page.content().await?);
-    // TODO: program stops working around here
+    page.wait_for_load_state("networkidle");
+    println!("\nget_optionchain() :: Page content after toggling and sleeping: {}", page.content().await?);
+    // TODO: program stops working around here; need to sleep longer so all chain data shows up? how do I know when its all loaded?
     let rows = page
         .query_selector_all("table.optionchain tr.chainrow")
         .await
@@ -256,6 +252,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         expiry.yte = current_yte;
         chain.expiries.push(expiry);
     }
+    println!("\nget_optionchain() :: Successfully created OptionChain struct for {} from bigcharts.marketwatch.com", ticker);
     browser.close()
         .await
         .context("\nget_optionchain() :: ERROR -> Could not close playwright chromium browser")?;
