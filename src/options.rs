@@ -8,7 +8,7 @@ use std::fs::File;
 
 const OURLP1: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?symb=";
 const OURLP2: &str = "&showAll=True";
-const HTMLDIR: &str = "html_out/";
+//const HTMLDIR: &str = "html_out/";
 
 struct Option {
     last: f64,
@@ -79,9 +79,7 @@ impl OptionChain {
 }
 
 fn str_to_float(s: &str) -> f64 {
-    s.replace(",", "")
-        .parse::<f64>()
-        .unwrap_or(0.0)
+    s.replace(",", "").parse::<f64>().unwrap_or(0.0)
 }
 
 /*fn rand_int_range(min: u64, max: u64) -> u64 {
@@ -164,14 +162,16 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     let current_time = chrono::Utc::now();
     let mut current_exp_date = "".to_string();
     let mut current_yte = 0.0;
+    let mut i: i128 = 0;
     for tr in rows {
-        println!("\nget_optionchain() :: Processing <tr> element > {:?}", tr);
+        i += 1;
+        println!("\nget_optionchain() :: Processing <tr> element {}", i);
         let tr_text_result = tr.text_content().await;
         if let Err(e) = &tr_text_result {
             eprintln!("\nget_optionchain() :: ERROR -> Could not get text content from <tr> element: {:?}", e);
             continue;
         }
-        let tr_text = tr_text_result.unwrap_or_default().trim().to_string();
+        let tr_text = tr_text_result.unwrap_or_default().expect("\nget_optionchain() :: ERROR -> Could not unwrap <tr> element text content").trim().to_string();
         if tr_text.is_empty() || tr_text.contains("Stock Price »") || tr_text.contains("CALLS") || tr_text.contains("Last") || tr_text.contains("Show") {
             continue;
         }
@@ -191,7 +191,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
                     continue;
                 },
             };
-            let parsed_datetime = chrono::DateTime::<chrono::Utc>::from_utc(parsed_time.into(), chrono::Utc);
+            let parsed_datetime = chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(parsed_time.into(), chrono::Utc);
             let duration = current_time.signed_duration_since(parsed_datetime);
             let new_yte = (duration.num_hours().abs() as f64) / 24.0 / 252.0;
             if !current_exp_date.is_empty() && current_exp_date != new_exp_date {
@@ -223,7 +223,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
                 eprintln!("\nget_optionchain() :: ERROR -> Could not get text content from <td> element: {:?}", e);
                 continue;
             }
-            let td_text = td_text_result.unwrap_or_default().trim().to_string();
+            let td_text = td_text_result.unwrap_or_default().expect("\nget_optionchain() :: ERROR -> Could not unwrap <td> element text content").trim().to_string();
             if td_text.is_empty() {
                 tr_data.push(0.0);
                 continue;
@@ -263,7 +263,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         };
         expiry.calls.push(call);
         expiry.puts.push(put);
-        println!("\nget_optionchain() :: Finished processing <tr> element > {:?}", tr);
+        println!("\nget_optionchain() :: Finished processing <tr> element {}", i);
     }
     if !current_exp_date.is_empty() && !expiry.calls.is_empty() {
         expiry.date = current_exp_date.clone();
