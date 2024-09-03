@@ -3,7 +3,7 @@ use playwright::Playwright;
 //use tokio::time::sleep;
 use csv::WriterBuilder;
 //use std::time::Duration;
-use std::io::Write;
+//use std::io::Write;
 use std::fs::File;
 
 const OURLP1: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?symb=";
@@ -166,20 +166,31 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
     let mut current_yte = 0.0;
     for tr in rows {
         println!("\nget_optionchain() :: Processing <tr> element > {:?}", tr);
-        let tr_text = tr.text_content().await.unwrap_or_default().expect("\nget_optionchain() :: ERROR ").trim().to_string();
+        let tr_text_result = tr.text_content().await;
+        if let Err(e) = &tr_text_result {
+            eprintln!("\nget_optionchain() :: ERROR -> Could not get text content from <tr> element: {:?}", e);
+            continue;
+        }
+        let tr_text = tr_text_result.unwrap_or_default().trim().to_string();
         if tr_text.is_empty() || tr_text.contains("Stock Price »") || tr_text.contains("CALLS") || tr_text.contains("Last") || tr_text.contains("Show") {
             continue;
         }
         if tr_text.contains("Expires") {
             let date_fields: Vec<&str> = tr_text.split_whitespace().collect();
             if date_fields.len() < 4 {
+                eprintln!("\nget_optionchain() :: ERROR -> Insufficient date fields: {:?}", date_fields);
                 continue;
             }
             let mut cleaned_day = remove_ordinal_suffix(date_fields[1]);
             cleaned_day = cleaned_day.replace(",", "");
             let new_exp_date = format!("{} {} {}", &date_fields[0], cleaned_day, date_fields[2]);
-            let parsed_time = chrono::NaiveDate::parse_from_str(&new_exp_date, "%b %d %Y")
-                .context(format!("\nget_optionchain() :: ERROR -> A problem occured parsing new_exp_date '{}'", new_exp_date))?;
+            let parsed_time = match chrono::NaiveDate::parse_from_str(&new_exp_date, "%b %d %Y") {
+                Ok(dt) => dt,
+                Err(e) => {
+                    eprintln!("\nget_optionchain() :: ERROR -> A problem occurred parsing new_exp_date '{}': {:?}", new_exp_date, e);
+                    continue;
+                },
+            };
             let parsed_datetime = chrono::DateTime::<chrono::Utc>::from_utc(parsed_time.into(), chrono::Utc);
             let duration = current_time.signed_duration_since(parsed_datetime);
             let new_yte = (duration.num_hours().abs() as f64) / 24.0 / 252.0;
@@ -199,10 +210,20 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
             current_yte = new_yte;
             continue;
         }
-        let td_cells = tr.query_selector_all("td").await?;
+        let td_cells_result = tr.query_selector_all("td").await;
+        if let Err(e) = &td_cells_result {
+            eprintln!("\nget_optionchain() :: ERROR -> Could not get table cells from <tr> element: {:?}", e);
+            continue;
+        }
+        let td_cells = td_cells_result.unwrap_or_default();
         let mut tr_data: Vec<f64> = Vec::new();
         for td in td_cells {
-            let td_text = td.text_content().await.unwrap_or_default().expect("\nget_optionchain() :: ERROR ").trim().to_string();
+            let td_text_result = td.text_content().await;
+            if let Err(e) = &td_text_result {
+                eprintln!("\nget_optionchain() :: ERROR -> Could not get text content from <td> element: {:?}", e);
+                continue;
+            }
+            let td_text = td_text_result.unwrap_or_default().trim().to_string();
             if td_text.is_empty() {
                 tr_data.push(0.0);
                 continue;
@@ -215,6 +236,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
             tr_data.push(num);
         }
         if tr_data.len() < 13 {
+            eprintln!("\nget_optionchain() :: ERROR -> Insufficient data in tr_data by end of populating: {:?}", tr_data);
             continue;
         }
         let call = Option {
