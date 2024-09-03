@@ -1,11 +1,14 @@
 use anyhow::{Context, Result};
 use playwright::Playwright;
-use tokio::time::sleep;
+//use tokio::time::sleep;
 use csv::WriterBuilder;
-use std::time::Duration;
+//use std::time::Duration;
+use std::io::Write;
 use std::fs::File;
 
-const OPTIONBASEURL: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?symb=";
+const OURLP1: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?symb=";
+const OURLP2: &str = "&showAll=True";
+const HTMLDIR: &str = "html_out/";
 
 struct Option {
     last: f64,
@@ -81,11 +84,11 @@ fn str_to_float(s: &str) -> f64 {
         .unwrap_or(0.0)
 }
 
-fn rand_int_range(min: u64, max: u64) -> u64 {
+/*fn rand_int_range(min: u64, max: u64) -> u64 {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     rng.gen_range(min..=max)
-}
+}*/
 
 fn remove_ordinal_suffix(s: &str) -> String {
     s.trim_end_matches(|c: char| c.is_ascii_alphabetic()).to_string()
@@ -102,14 +105,22 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         .context("\nget_optionchain() :: ERROR -> Could not launch Chromium")?;
     let context = browser.context_builder().build().await?;
     let page = context.new_page().await?;
-    let oc_url = format!("{}{}", OPTIONBASEURL, ticker);
+    let oc_url = format!("{}{}{}", OURLP1, ticker, OURLP2);
     println!("\nget_optionchain() :: Fetching HTML from bigcharts.marketwatch.com for {}", ticker);
     page.goto_builder(&oc_url)
         .goto()
         .await
         .context("\nget_optionchain() :: ERROR -> Could not navigate to bigcharts.marketwatch.com")?;
     println!("\nget_optionchain() :: Successfully navigated to bigcharts.marketwatch.com for {}", ticker);
-    //println!("\nget_optionchain() :: Page content before toggling: {}", page.content().await?);
+    page.wait_for_selector_builder("table.optionchain tr.chainrow:last-child")
+        .wait_for_selector()
+        .await
+        .context("\nget_optionchain() :: ERROR -> Timed out waiting for the last row of the option chain table")?;
+    /*let html_content = page.content().await?;
+    let html_name = format!("{}{}.html", HTMLDIR, ticker);
+    let mut html_file = File::create(&html_name)?;
+    html_file.write_all(html_content.as_bytes())?;
+    println!("\nget_optionchain() :: Successfully saved full HTML as {}", html_name);*/
     let price_str = page
         .query_selector(".fright .price")
         .await?
@@ -134,22 +145,6 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         yield_display = cleaned_yield;
     }
     println!("\nget_optionchain() :: Current {} Price: ${:.2}; Dividend Yield: {:.4} ({}%)", ticker, current_price, yield_val, yield_display);
-    let sleep_duration = Duration::from_millis(rand_int_range(1000, 2000));
-    sleep(sleep_duration).await;
-    println!("\nget_optionchain() :: Sleeping {:?} before starting toggles", sleep_duration);
-    let toggles = page
-        .query_selector_all("table.optionchain tr.optiontoggle td.caption form.ajaxpartial")
-        .await
-        .context("\nget_optionchain() :: ERROR -> Could not get all toggle elements from bigcharts.marketwatch.com HTML response")?;
-    if toggles.len() > 1 {
-        for (i, toggle) in toggles.into_iter().enumerate().skip(1) {
-            toggle.click_builder().click().await.context("\nget_optionchain() :: ERROR -> Could not click toggle")?;
-            page.wait_for_load_state("networkidle");
-        }
-    }
-    page.wait_for_load_state("networkidle");
-    println!("\nget_optionchain() :: Page content after toggling and sleeping: {}", page.content().await?);
-    // TODO: program stops working around here; need to sleep longer so all chain data shows up? how do I know when its all loaded?
     let rows = page
         .query_selector_all("table.optionchain tr.chainrow")
         .await
@@ -246,6 +241,7 @@ pub async fn get_optionchain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn
         };
         expiry.calls.push(call);
         expiry.puts.push(put);
+        println!("\nget_optionchain() :: Finished processing <tr> element > {:?}", tr);
     }
     if !current_exp_date.is_empty() && !expiry.calls.is_empty() {
         expiry.date = current_exp_date.clone();

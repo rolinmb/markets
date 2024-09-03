@@ -1,9 +1,12 @@
 /target
 Cargo.lock
+go.sum
 av_key.txt
-src/main.exe
-src/main.o
-src/main
+src/gomain.exe
+src/gomain.o
+src/gomain
 /csv_out
 /img_out
 /pdf_out
+/dat_out
+/html_out

@@ -8,7 +8,7 @@ import (
     "time"
     "regexp"
     "unicode"
-    "os/exec"
+    //"os/exec"
     "strings"
     "strconv"
     "math/rand"
@@ -42,6 +42,18 @@ func removeOrdinalSuffix(input string) string {
 func isAlphabetical(s string) bool {
     for _, r := range s {
         if !unicode.IsLetter(r) {
+            return false
+        }
+    }
+    return true
+}
+
+func isValidCsv(s string) bool {
+    if !strings.HasSuffix(s, ".csv") {
+        return false
+    }
+    for _, r := range s[:len(s) - 4] {
+        if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' && r != '_' && r != '.' && r != '/' {
             return false
         }
     }
@@ -320,7 +332,7 @@ type OptionChain struct {
     DivYield float64
 }
 
-func (chain *OptionChain) chainToCSV(csvName string) {
+func (chain *OptionChain) saveAsCsv(csvName string) {
     csvFile, err := os.Create(csvName)
     if err != nil {
         log.Fatalf("\nchainToCSV(): Error creating %s: %v", csvName, err)
@@ -336,7 +348,7 @@ func (chain *OptionChain) chainToCSV(csvName string) {
         "Strike",
     }
     if err := csvWriter.Write(headers); err != nil {
-        log.Fatalf("chainToCSV(): Error writing headers to %s: %v", csvName, err)
+        log.Fatalf("\nchainToCSV(): Error writing headers to %s: %v", csvName, err)
     }
     for _, expiry := range chain.Expiries {
         for i := 0; i < len(expiry.Calls); i++ {
@@ -359,7 +371,7 @@ func (chain *OptionChain) chainToCSV(csvName string) {
                 fmt.Sprintf("%.2f", expiry.Calls[i].Strike),
             }
             if err := csvWriter.Write(csvRow); err != nil {
-                log.Fatalf("chainToCSV(): Error writing csv row %v to %s: %v", i, csvName, err)
+                log.Fatalf("\nchainToCSV(): Error writing csv row %v to %s: %v", i, csvName, err)
             }
         }
     }
@@ -423,7 +435,7 @@ func getPriceAndYield(ticker string) (float64, float64) {
 	reader := csv.NewReader(csvFile)
 	lines, err := reader.ReadAll()
 	if err != nil {
-		log.Fatalf("chainFromCSV(): Error reading lines from %s: %v", csvName, err)
+		log.Fatalf("\nchainFromCSV(): Error reading lines from %s: %v", csvName, err)
 	}
 	chain := OptionChain{ Ticker: "" }
     currentExpiry := OptionExpiry{ Date: "" }
@@ -432,7 +444,7 @@ func getPriceAndYield(ticker string) (float64, float64) {
 			continue
 		}
 		if len(line) < 16 {
-			log.Fatalf("chainFromCSV(): Unexpected number of columns in %s on line %v (found %v tokens, expected 16)", csvName, i, len(line))
+			log.Fatalf("\nchainFromCSV(): Unexpected number of columns in %s on line %v (found %v tokens, expected 16)", csvName, i, len(line))
 		}
         if chain.Ticker == "" {
             chain.Ticker = line[0]
@@ -480,24 +492,24 @@ func getPriceAndYield(ticker string) (float64, float64) {
     return chain
 }*/
 
-func scrapeChain(ticker string) OptionChain {
+func scrapeChain(ticker,csvName string) {
     pw, err := playwright.Run()
     if err != nil {
-        log.Fatalf("scapeChain(): could not start playwright: %v", err)
+        log.Fatalf("\nscapeChain(): could not start playwright: %v", err)
     }
     browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
         Headless: playwright.Bool(true),
     })
     if err != nil {
-        log.Fatalf("scapeChain(): could not launch chromium: %v", err)
+        log.Fatalf("\nscapeChain(): could not launch chromium: %v", err)
     }
     page, err := browser.NewPage()
     if err != nil {
-        log.Fatalf("scapeChain(): could not create page: %v", err)
+        log.Fatalf("\nscapeChain(): could not create page: %v", err)
     }
     url := fmt.Sprintf("https://bigcharts.marketwatch.com/quickchart/options.asp?symb=%s", ticker)
     if _, err = page.Goto(url); err != nil {
-        log.Fatalf("scapeChain(): could not goto: %v", err)
+        log.Fatalf("\nscapeChain(): could not goto: %v", err)
     }
     fmt.Printf("\nscapeChain(): [playwright-go Chromium driver navigated to\n > %s]\n", url)
     /*initHTML, err := page.Content()
@@ -529,7 +541,7 @@ func scrapeChain(ticker string) OptionChain {
     time.Sleep(time.Duration(randIntRange(2000, 3000))*time.Millisecond)
     toggles, err := page.Locator("table.optionchain").Locator("tr.optiontoggle").Locator("td.caption").Locator("form.ajaxpartial").All()
     if err != nil {
-        log.Fatalf("scapeChain(): could not get all toggled: %v", err)
+        log.Fatalf("\nscapeChain(): could not get all toggled: %v", err)
     }
     fmt.Printf("\nscapeChain(): [len(toggles) = %d]\n", len(toggles))
     if len(toggles) > 1 {
@@ -590,13 +602,13 @@ func scrapeChain(ticker string) OptionChain {
         }
         tdCells, err := tr.Locator("td").All()
         if err != nil {
-            log.Fatalf("scapeChain(): could not get tdCells: %v", err)
+            log.Fatalf("\nscapeChain(): could not get tdCells: %v", err)
         }
         var trData []float64
         for _, td := range tdCells {
             tdText, err := td.TextContent()
             if err != nil {
-                log.Fatalf("scapeChain(): could not get tdText: %v", err)
+                log.Fatalf("\nscapeChain(): could not get tdText: %v", err)
             }
             if strings.TrimSpace(tdText) == "" {
                 trData = append(trData, 0.0)
@@ -649,12 +661,13 @@ func scrapeChain(ticker string) OptionChain {
         chain.Expiries = append(chain.Expiries, expiry)
     }
     if err = browser.Close(); err != nil {
-        log.Fatalf("scapeChain(): could not close browser: %v", err)
+        log.Fatalf("\nscapeChain(): could not close browser: %v", err)
     }
     if err = pw.Stop(); err != nil {
-        log.Fatalf("scapeChain(): could not stop Playwright: %v", err)
+        log.Fatalf("\nscapeChain(): could not stop Playwright: %v", err)
     }
-    return chain
+    chain.saveAsCsv(csvName)
+    fmt.Printf("\nscrapeChain(): Successfully saved %s option chain as %s", ticker, csvName)
 }
 
 /*func (chain *OptionChain) plotSurfaces(surfType int, tnowStr string) {
@@ -790,19 +803,19 @@ func scrapeChain(ticker string) OptionChain {
             if surfType > 0 {
                 piv = put.getImpVol(chain.CurrentPrice, chain.DivYield)
                 if surfType >= 2 {
-                pd1 = dOne(piv, chain.CurrentPrice, put.Strike, put.Yte, chain.DivYield)
-                if surfType == 2 || surfType == 3 {
-                    pDelta = put.getDelta(piv, chain.CurrentPrice, chain.DivYield, pd1)
-                }
-                if (surfType >= 4 && surfType <= 6) || (surfType >= 8 && surfType <= 16){
-                    pd2 = dTwo(pd1, piv, put.Yte)
-                    if surfType == 4 || surfType == 9 || surfType == 11 || surfType == 16 {
-                    pVega = put.getVega(piv, chain.CurrentPrice, chain.DivYield, pd1, pd2)
+                    pd1 = dOne(piv, chain.CurrentPrice, put.Strike, put.Yte, chain.DivYield)
+                    if surfType == 2 || surfType == 3 {
+                        pDelta = put.getDelta(piv, chain.CurrentPrice, chain.DivYield, pd1)
                     }
-                    if surfType == 13 || surfType == 14 {
-                    pGamma = put.getGamma(piv, chain.CurrentPrice, pd2)
+                    if (surfType >= 4 && surfType <= 6) || (surfType >= 8 && surfType <= 16){
+                        pd2 = dTwo(pd1, piv, put.Yte)
+                        if surfType == 4 || surfType == 9 || surfType == 11 || surfType == 16 {
+                            pVega = put.getVega(piv, chain.CurrentPrice, chain.DivYield, pd1, pd2)
+                        }
+                        if surfType == 13 || surfType == 14 {
+                            pGamma = put.getGamma(piv, chain.CurrentPrice, pd2)
+                        }
                     }
-                }
                 }
             }
             switch surfType {
