@@ -1,15 +1,17 @@
+use chrono::Local;
 mod finviz;
 use finviz::{fetch_finviz_info};
 mod avantage;
 use avantage::{get_underlying_av};
 mod options;
 use options::{fetch_option_chain};
-use chrono::Local;
+mod graphing;
+use graphing::{generate_surface_plot};
 use std::env;
 use std::process::exit;
 
 const CSVDIR: &str = "csv_out/";
-//const IMGDIR: &str = "img_out/";
+const IMGDIR: &str = "img_out/";
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,9 +27,12 @@ fn main() {
         let fv_csv = format!("{}{}_fv_{}.csv", CSVDIR, uticker, datetime_str);
         let av_csv = format!("{}{}_av_{}.csv", CSVDIR, uticker, datetime_str);
         let oc_csv = format!("{}{}_oc_{}.csv", CSVDIR, uticker, datetime_str);
+        let calls_png = format!("{}{}_cprice_{}.png", IMGDIR, uticker, datetime_str);
+        let puts_png = format!("{}{}_pprice_{}.png", IMGDIR, uticker, datetime_str);
         let _ = fetch_finviz_info(&uticker, &fv_csv);
         let _ = get_underlying_av(&uticker, &av_csv);
         let _ = fetch_option_chain(&uticker, &oc_csv);
+        let _ = generate_surface_plot(&oc_csv, &calls_png, &puts_png);
     } else {
         eprintln!("\nmain() :: ERROR -> Please enter a financial ticker/symbol that is at most 4 alphabetical characters; you entered '{}'", ticker);
         exit(1);

@@ -10,15 +10,15 @@ const RVOLWINDOW: usize = 30;
 const ATRPERIOD: usize = 14;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-struct TimeSeries {
+pub struct TimeSeries {
     #[serde(rename = "Meta Data")]
-    meta_data: MetaData,
+    pub meta_data: MetaData,
     #[serde(rename = "Time Series (Daily)")]
-    ohlcv: BTreeMap<String, DayData>,
+    pub ohlcv: BTreeMap<String, DayData>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-struct MetaData {
+pub struct MetaData {
     #[serde(rename = "1. Information")]
     information: String,
     #[serde(rename = "2. Symbol")]
@@ -32,17 +32,17 @@ struct MetaData {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-struct DayData {
+pub struct DayData {
     #[serde(rename = "1. open")]
-    open: String,
+    pub open: String,
     #[serde(rename = "2. high")]
-    high: String,
+    pub high: String,
     #[serde(rename = "3. low")]
-    low: String,
+    pub low: String,
     #[serde(rename = "4. close")]
-    close: String,
+    pub close: String,
     #[serde(rename = "5. volume")]
-    volume: String,
+    pub volume: String,
 }
 
 fn daily_returns(t_series: &TimeSeries) -> Vec<f64> {

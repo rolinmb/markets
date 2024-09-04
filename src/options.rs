@@ -10,31 +10,31 @@ const OURLP2: &str = "&showAll=True";
 
 #[derive(Debug, Clone)]
 pub struct Option {
-    last: f64,
-    change: f64,
-    vol: f64,
-    bid: f64,
-    ask: f64,
-    open_int: f64,
-    strike: f64,
-    yte: f64,
-    is_call: bool,
+    pub last: f64,
+    pub change: f64,
+    pub vol: f64,
+    pub bid: f64,
+    pub ask: f64,
+    pub open_int: f64,
+    pub strike: f64,
+    pub yte: f64,
+    pub is_call: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct OptionExpiry {
-    date: String,
-    yte: f64,
-    calls: Vec<Option>,
-    puts: Vec<Option>,
+    pub date: String,
+    pub yte: f64,
+    pub calls: Vec<Option>,
+    pub puts: Vec<Option>,
 }
 
 #[derive(Debug, Clone)]
 pub struct OptionChain {
-    expiries: Vec<OptionExpiry>,
-    ticker: String,
-    current_price: f64,
-    div_yield: f64,
+    pub expiries: Vec<OptionExpiry>,
+    pub ticker: String,
+    pub current_price: f64,
+    pub div_yield: f64,
 }
 
 fn str_to_float(s: &str) -> f64 {
