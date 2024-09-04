@@ -24,6 +24,7 @@ pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
         set ylabel "{}"
         set title "{} {}"
         set grid
+        set logscale y
         set key autotitle columnheader
         plot '{}' using "Date":"Close" with lines title '{}'
         "#, png_name, data_label, ticker, data_label, ts_csv_name, data_label);
