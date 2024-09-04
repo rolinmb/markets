@@ -1,12 +1,15 @@
 use anyhow::{Context, Result};
 use playwright::Playwright;
+use csv::ReaderBuilder;
+use std::fs::File;
+use std::error::Error;
 
 const OURLP1: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?symb=";
 const OURLP2: &str = "&showAll=True";
 //const HTMLDIR: &str = "html_out/";
 
 #[derive(Debug, Clone)]
-struct Option {
+pub struct Option {
     last: f64,
     change: f64,
     vol: f64,
@@ -19,7 +22,7 @@ struct Option {
 }
 
 #[derive(Debug, Clone)]
-struct OptionExpiry {
+pub struct OptionExpiry {
     date: String,
     yte: f64,
     calls: Vec<Option>,
@@ -27,7 +30,7 @@ struct OptionExpiry {
 }
 
 #[derive(Debug, Clone)]
-struct OptionChain {
+pub struct OptionChain {
     expiries: Vec<OptionExpiry>,
     ticker: String,
     current_price: f64,
@@ -262,4 +265,70 @@ pub async fn fetch_option_chain(ticker: &str, csv_name: &str) -> Result<(), Box<
         eprintln!("\nfetch_option_chain() :: ERROR -> Unsuccessful at parsing HTML into OptionChain struct; no csv output to be made");
     }
     Ok(())
+}
+
+pub fn load_chain_from_csv(csv_file: &str) -> Result<OptionChain, Box<dyn Error>> {
+    let file = File::open(csv_file)?;
+    let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
+    let mut expiries: Vec<OptionExpiry> = Vec::new();
+    let mut current_expiry: OptionExpiry = OptionExpiry {
+        date: String::new(),
+        yte: 0.0,
+        calls: Vec::new(),
+        puts: Vec::new(),
+    };
+    let mut current_ticker: String = String::new();
+    let current_price: f64 = 0.0;
+    let div_yield: f64 = 0.0;
+    for result in rdr.records() {
+        let record = result?;
+        if current_ticker.is_empty() {
+            current_ticker = record[0].to_string();
+        }
+        let expiry_date = record[1].to_string();
+        let strike = record[2].parse::<f64>()?;
+        let is_call = record[3] == *"c";
+        let last = record[4].parse::<f64>()?;
+        let change = record[5].parse::<f64>()?;
+        let vol = record[6].parse::<f64>()?;
+        let bid = record[7].parse::<f64>()?;
+        let ask = record[8].parse::<f64>()?;
+        let open_int = record[9].parse::<f64>()?;
+        let yte = record[10].parse::<f64>()?;
+        if expiry_date != current_expiry.date && !current_expiry.date.is_empty() {
+            expiries.push(current_expiry.clone());
+            current_expiry = OptionExpiry {
+                date: expiry_date.clone(),
+                yte,
+                calls: Vec::new(),
+                puts: Vec::new(),
+            };
+        }
+        let opt = Option {
+            last,
+            change,
+            vol,
+            bid,
+            ask,
+            open_int,
+            strike,
+            yte,
+            is_call,
+        };
+        if is_call {
+            current_expiry.calls.push(opt);
+        } else {
+            current_expiry.puts.push(opt);
+        }
+    }
+    if !current_expiry.calls.is_empty() || !current_expiry.puts.is_empty() {
+        expiries.push(current_expiry);
+    }
+    let option_chain = OptionChain {
+        expiries,
+        ticker: current_ticker,
+        current_price,
+        div_yield,
+    };
+    Ok(option_chain)
 }
