@@ -267,7 +267,7 @@ pub async fn fetch_option_chain(ticker: &str, csv_name: &str) -> Result<(), Box<
     Ok(())
 }
 
-pub fn load_chain_from_csv(csv_file: &str) -> Result<OptionChain, Box<dyn Error>> {
+pub fn chain_from_csv(csv_file: &str) -> Result<OptionChain, Box<dyn Error>> {
     let file = File::open(csv_file)?;
     let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
     let mut expiries: Vec<OptionExpiry> = Vec::new();

@@ -231,7 +231,28 @@ fn tseries_to_csv(t_series: &TimeSeries, filename: &str) -> Result<(), Box<dyn S
     Ok(())
 }
 
-/*pub fn tseries_from_csv(filename: &str) -> Result<TimeSeries, Box<dyn StdError>> {
+pub fn get_underlying_av(ticker: &str, csv_name: &str) -> Result<(), Box<dyn StdError>> {
+    let content = std::fs::read_to_string(AVPATH)?;
+    let avkey = content.trim();
+    if avkey.is_empty() {
+        eprintln!("\nget_underlying_av() :: ERROR -> Alpha Vantage API Key not found; either {} is empty or missing", AVPATH);
+        return Ok(());
+    }
+    let api_url = format!("{}{}&outputsize=full&apikey={}", AVBASEURL, ticker, avkey);
+    println!("\nget_underlying_av() :: Fetching JSON from Alpha Vantage API for {}", ticker);
+    let response = reqwest::blocking::get(&api_url)?;
+    let t_series: TimeSeries = response.json()?;
+    if t_series.meta_data.last_refreshed.is_empty() {
+        eprintln!("\nget_underlying_av(): ERROR -> Alpha Vantage API request limit exceeded; either ticker/symbol {} does not exist, or some other error occurred", ticker);
+        return Ok(());
+    }
+    println!("\nget_underlying_av() :: Successfully fetched JSON OHLCV data from Alpha Vantage for {}", ticker);
+    let _ = tseries_to_csv(&t_series, csv_name);
+    println!("\nget_underlying_av() :: Successfully created {} with time series data for {}", csv_name, ticker);
+    Ok(())
+}
+
+pub fn tseries_from_csv(filename: &str) -> Result<TimeSeries, Box<dyn StdError>> {
     let file = File::open(filename)?;
     let mut reader = csv::Reader::from_reader(file);
     let mut ts = TimeSeries {
@@ -262,25 +283,4 @@ fn tseries_to_csv(t_series: &TimeSeries, filename: &str) -> Result<(), Box<dyn S
         );
     }
     Ok(ts)
-}*/
-
-pub fn get_underlying_av(ticker: &str, csv_name: &str) -> Result<(), Box<dyn StdError>> {
-    let content = std::fs::read_to_string(AVPATH)?;
-    let avkey = content.trim();
-    if avkey.is_empty() {
-        eprintln!("\nget_underlying_av() :: ERROR -> Alpha Vantage API Key not found; either {} is empty or missing", AVPATH);
-        return Ok(());
-    }
-    let api_url = format!("{}{}&outputsize=full&apikey={}", AVBASEURL, ticker, avkey);
-    println!("\nget_underlying_av() :: Fetching JSON from Alpha Vantage API for {}", ticker);
-    let response = reqwest::blocking::get(&api_url)?;
-    let t_series: TimeSeries = response.json()?;
-    if t_series.meta_data.last_refreshed.is_empty() {
-        eprintln!("\nget_underlying_av(): ERROR -> Alpha Vantage API request limit exceeded; either ticker/symbol {} does not exist, or some other error occurred", ticker);
-        return Ok(());
-    }
-    println!("\nget_underlying_av() :: Successfully fetched JSON OHLCV data from Alpha Vantage for {}", ticker);
-    let _ = tseries_to_csv(&t_series, csv_name);
-    println!("\nget_underlying_av() :: Successfully created {} with time series data for {}", csv_name, ticker);
-    Ok(())
 }
