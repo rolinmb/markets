@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-//use super::avantage::tseries_from_csv;
+use super::avantage::tseries_from_csv;
 use super::options::chain_from_csv;
 use std::process::{Command, Stdio};
 use std::fs::File;
@@ -7,6 +7,11 @@ use std::io::{Write, BufWriter};
 
 const CDATNAME: &str = "dat_out/ctemp.dat";
 const PDATNAME: &str = "dat_out/ptemp.dat";
+
+pub fn generate_tseries_plot(ts_csv_name: &str) -> Result<()> {
+    let tseries = tseries_from_csv(ts_csv_name);
+    Ok(())
+}
 
 pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_name: &str) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
