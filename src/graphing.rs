@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 //use super::avantage::tseries_from_csv;
 use super::options::chain_from_csv;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::fs::File;
 use std::io::{Write, BufWriter};
 
@@ -20,18 +20,16 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
         for call in expiry.calls.iter() {
             writeln!(cwriter, "{} {} {}", call.strike, call.yte, call.last)?;
         }
+        writeln!(cwriter, "")?;
         for put in expiry.puts.iter() {
             writeln!(pwriter, "{} {} {}", put.strike, put.yte, put.last)?;
         }
-        writeln!(cwriter, "")?;
         writeln!(pwriter, "")?;
     }
     cwriter.flush()?;
     pwriter.flush()?;
-    let gnuplot_call_command = format!(
-        r#"
-        gnuplot
-        set terminal png
+    let gnuplot_cscript = format!(
+        r#"set terminal png
         set output '{}'
         set xlabel "Strike Price ($)"
         set ylabel "YTE"
@@ -43,15 +41,12 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
     "#, call_png_name, data_label, tkr, data_label, CDATNAME
     );
     Command::new("cmd")
-        .arg(gnuplot_call_command)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .context("\ngenerate_surface_plot() :: ERROR -> Failed to execute gnuplot_call_command")?;
-    let gnuplot_put_command = format!(
-        r#"
-        gnuplot
-        set terminal png
+        .args(["/C", "gnuplot", &gnuplot_cscript])
+        .output()
+        .expect("\ngenerate_surface_plot() :: ERROR -> Failed to execute gnuplot call surface generation command");
+    println!("\ngenerate_surface_plot() :: Successfully generated {}",put_png_name);
+    let gnuplot_pscript = format!(
+        r#"set terminal png
         set output '{}'
         set xlabel "Strike Price"
         set ylabel "YTE"
@@ -63,11 +58,9 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
     "#, put_png_name, data_label, tkr, data_label, PDATNAME
     );
     Command::new("cmd")
-        .arg(gnuplot_put_command)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .context("\ngenerate_surface_plot() :: ERROR -> Failed to execute gnuplot_put_command")?;
-    println!("\ngenerate_surface_plot() :: Successfully generated {} and {}", call_png_name, put_png_name);
+        .args(["/C", "gnuplot", &gnuplot_pscript])
+        .output()
+        .expect("\ngenerate_surface_plot() :: ERROR -> Failed to execute gnuplot put surface generation command");
+    println!("\ngenerate_surface_plot() :: Successfully generated {}",put_png_name);
     Ok(())
 }
