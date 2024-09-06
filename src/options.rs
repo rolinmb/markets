@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use playwright::Playwright;
 use csv::ReaderBuilder;
 use super::finmath::{cnd, npd, brentq, black_scholes};
+use super::utils::str_to_float;
 use std::fs::File;
 use std::error::Error;
 
@@ -214,10 +215,6 @@ pub struct OptionChain {
     pub ticker: String,
     pub current_price: f64,
     pub div_yield: f64,
-}
-
-fn str_to_float(s: &str) -> f64 {
-    s.replace(",", "").parse::<f64>().unwrap_or(0.0)
 }
 
 #[tokio::main]

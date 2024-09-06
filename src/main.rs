@@ -8,6 +8,8 @@ mod options;
 use options::{fetch_option_chain};
 mod graphing;
 use graphing::{IMGDIR, generate_tseries_plot, generate_surface_plot};
+mod utils;
+use utils::{clear_directory_or_create, create_directory_if_dne};
 use std::env;
 use std::process::exit;
 
@@ -21,6 +23,11 @@ fn main() {
     }
     let ticker = &args[1];
     if ticker.chars().all(|c| c.is_alphabetic()) && ticker.len() <= 4 {
+        let _ = create_directory_if_dne("csv_out");
+        let _ = create_directory_if_dne("pdf_out");
+        let _ = clear_directory_or_create("img_out");
+        let _ = clear_directory_or_create("dat_out");
+        let _ = clear_directory_or_create("html_out");
         let uticker = ticker.to_uppercase();
         let now = Local::now();
         let datetime_str = now.format("%Y-%m-%d_%H-%M-%S").to_string();
