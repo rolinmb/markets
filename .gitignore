@@ -7,3 +7,5 @@ tickers_list.txt
 /pdf_out
 /dat_out
 /html_out
+__pycache__
+scripts/__pycache__

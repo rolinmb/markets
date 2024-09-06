@@ -9,7 +9,7 @@ pub fn str_to_float(s: &str) -> f64 {
 pub fn clear_directory_or_create(dir_name: &str) -> io::Result<()> {
     let dir = Path::new(dir_name);
     if dir.exists() {
-        println!("clear_directory_or_create(): Cleaning directory {}", dir_name);
+        println!("clear_directory_or_create() :: Cleaning directory {}", dir_name);
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -20,10 +20,10 @@ pub fn clear_directory_or_create(dir_name: &str) -> io::Result<()> {
             }
         }
     } else {
-        println!("clean_directory_or_create(): Creating directory {}", dir_name);
+        println!("clean_directory_or_create() :: Creating directory {}", dir_name);
         fs::create_dir_all(dir)?;
     }
-    println!("clean_directory_or_create(): Successfully created/cleaned directory {}", dir_name);
+    println!("clean_directory_or_create() :: Successfully created/cleaned directory {}", dir_name);
     Ok(())
 }
 

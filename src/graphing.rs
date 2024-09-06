@@ -44,7 +44,7 @@ pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
 
 pub fn generate_surface_plot(chain_csv_name: &str, &field: &u8) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
-        .map_err(|e| anyhow::anyhow!("Failed to load option chain with chain_from_csv: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("\ngenerate_surface_plot() :: ERROR -> Failed to load option chain with chain_from_csv: {}", e))?;
     let cdatfile = File::create(CDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create cdatfile")?;
     let pdatfile = File::create(PDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create pdatfile")?;
     let mut cwriter = BufWriter::new(cdatfile);

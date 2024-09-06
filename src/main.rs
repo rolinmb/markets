@@ -25,7 +25,7 @@ fn main() {
     if ticker.chars().all(|c| c.is_alphabetic()) && ticker.len() <= 4 {
         let _ = create_directory_if_dne("csv_out");
         let _ = create_directory_if_dne("pdf_out");
-        let _ = clear_directory_or_create("img_out");
+        let _ = create_directory_if_dne("img_out");
         let _ = clear_directory_or_create("dat_out");
         let _ = clear_directory_or_create("html_out");
         let uticker = ticker.to_uppercase();
@@ -35,12 +35,13 @@ fn main() {
         let av_csv = format!("{}{}_av_{}.csv", CSVDIR, uticker, datetime_str);
         let oc_csv = format!("{}{}_oc_{}.csv", CSVDIR, uticker, datetime_str);
         let hist_png = format!("{}{}_history_{}.png", IMGDIR, uticker, datetime_str);
-        let plot_field: u8 = 8u8;
         let _ = fetch_finviz_info(&uticker, &fv_csv);
         let _ = get_underlying_av(&uticker, &av_csv);
         let _ = fetch_option_chain(&uticker, &oc_csv);
         let _ = generate_tseries_plot(&av_csv, &hist_png);
-        let _ = generate_surface_plot(&oc_csv, &plot_field);
+        for plot_field in 0..24 {
+            let _ = generate_surface_plot(&oc_csv, &(plot_field as u8));
+        }
     } else {
         eprintln!("\nmain() :: ERROR -> Please enter a financial ticker/symbol that is at most 4 alphabetical characters; you entered '{}'", ticker);
         exit(1);
