@@ -4,7 +4,7 @@ const A3: f64 = 1.421413741;
 const A4: f64 = -1.453152027;
 const A5: f64 = 1.061405429;
 const P: f64 = 0.3275911;
-const FEDFUNDS: f64 = 0.0533;
+pub const FEDFUNDS: f64 = 0.0533;
 // Cumulative Normal Distribution
 pub fn cnd(x: f64) -> f64 {
     let sign = if x < 0.0 { -1.0 } else { 1.0 };
@@ -16,7 +16,7 @@ pub fn cnd(x: f64) -> f64 {
 // Normal Probability Density Function
 pub fn npd(x: f64) -> f64 {
     let exp_arg = -x * x / 2.0;
-    let exponential_term = exp(exp_arg);
+    let exponential_term = exp_arg.exp();
     let sqrt_two_pi = (2.0 * std::f64::consts::PI).sqrt();
     exponential_term / sqrt_two_pi * (A1 * exp_arg + A2 * exp_arg.powi(2) + A3 * exp_arg.powi(3) + A4 * exp_arg.powi(4) + A5 * exp_arg.powi(5)) / (1.0 + P * x * x)
 }

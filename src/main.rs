@@ -3,6 +3,7 @@ mod finviz;
 use finviz::{fetch_finviz_info};
 mod avantage;
 use avantage::{get_underlying_av};
+mod finmath;
 mod options;
 use options::{fetch_option_chain};
 mod graphing;

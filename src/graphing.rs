@@ -91,23 +91,23 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
                 6 => call.strike,
                 7 => call.yte,
                 8 => civ,
-                9 => call.get_delta(chain.current_price, chain.div_yield, cd1),
+                9 => call.get_delta(chain.div_yield, cd1),
                 10 => {
-                    let cdelta = call.get_delta(chain.current_price, chain.div_yield, cd1);
+                    let cdelta = call.get_delta(chain.div_yield, cd1);
                     call.get_elasticity(chain.current_price, cdelta)
                 },
-                11 => call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2),
+                11 => call.get_vega(cd2),
                 12 => call.get_theta(civ, chain.current_price, chain.div_yield, cd1, cd2, FEDFUNDS),
                 13 => call.get_rho(cd2, FEDFUNDS),
-                14 => call.get_epsilon(civ, chain.current_price, chain.div_yield, cd1),
+                14 => call.get_epsilon(chain.current_price, chain.div_yield, cd1),
                 15 => call.get_gamma(civ, chain.current_price, cd2, FEDFUNDS),
                 16 => {
-                    let cvega: f64 = call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2);
+                    let cvega: f64 = call.get_vega(cd2);
                     call.get_vanna(civ, cvega, chain.current_price, cd1)
                 },
                 17 => call.get_charm(civ, chain.div_yield, cd1, cd2, FEDFUNDS),
                 18 => {
-                    let cvega: f64 = call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2);
+                    let cvega: f64 = call.get_vega(cd2);
                     call.get_vomma(civ, cvega, cd1, cd2)
                 },
                 19 => call.get_veta(civ, chain.current_price, chain.div_yield, cd1, cd2, FEDFUNDS),
@@ -121,7 +121,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
                 },
                 22 => call.get_color(civ, chain.current_price, chain.div_yield, cd1, cd2, FEDFUNDS),
                 23 => {
-                    let cvega: f64 = call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2);
+                    let cvega: f64 = call.get_vega(cd2);
                     call.get_ultima(civ, cvega, cd1, cd2)
                 },
                 _ => call.last,
@@ -143,23 +143,23 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
                 6 => put.strike,
                 7 => put.yte,
                 8 => piv,
-                9 => put.get_delta(chain.current_price, chain.div_yield, pd1),
+                9 => put.get_delta(chain.div_yield, pd1),
                 10 => {
-                    let pdelta = put.get_delta(chain.current_price, chain.div_yield, pd1);
+                    let pdelta = put.get_delta(chain.div_yield, pd1);
                     put.get_elasticity(chain.current_price, pdelta)
                 },
-                11 => put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2),
+                11 => put.get_vega(pd2),
                 12 => put.get_theta(piv, chain.current_price, chain.div_yield, pd1, pd2, FEDFUNDS),
                 13 => put.get_rho(pd2, FEDFUNDS),
-                14 => put.get_epsilon(piv, chain.current_price, chain.div_yield, pd1),
+                14 => put.get_epsilon(chain.current_price, chain.div_yield, pd1),
                 15 => put.get_gamma(piv, chain.current_price, pd2, FEDFUNDS),
                 16 => {
-                    let pvega: f64 = put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2);
+                    let pvega: f64 = put.get_vega(pd2);
                     put.get_vanna(piv, pvega, chain.current_price, pd1)
                 },
                 17 => put.get_charm(piv, chain.div_yield, pd1, pd2, FEDFUNDS),
                 18 => {
-                    let pvega: f64 = put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2);
+                    let pvega: f64 = put.get_vega(pd2);
                     put.get_vomma(piv, pvega, pd1, pd2)
                 },
                 19 => put.get_veta(piv, chain.current_price, chain.div_yield, pd1, pd2, FEDFUNDS),
@@ -173,7 +173,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
                 },
                 22 => put.get_color(piv, chain.current_price, chain.div_yield, pd1, pd2, FEDFUNDS),
                 23 => {
-                    let pvega: f64 = put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2);
+                    let pvega: f64 = put.get_vega(pd2);
                     put.get_ultima(piv, pvega, pd1, pd2)
                 },
                 _ => put.last,

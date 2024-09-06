@@ -252,7 +252,7 @@ pub fn get_underlying_av(ticker: &str, csv_name: &str) -> Result<(), Box<dyn Std
     Ok(())
 }
 
-pub fn tseries_from_csv(filename: &str) -> Result<TimeSeries, Box<dyn StdError>> {
+/*pub fn tseries_from_csv(filename: &str) -> Result<TimeSeries, Box<dyn StdError>> {
     let file = File::open(filename)?;
     let mut reader = csv::Reader::from_reader(file);
     let mut ts = TimeSeries {
@@ -283,4 +283,4 @@ pub fn tseries_from_csv(filename: &str) -> Result<TimeSeries, Box<dyn StdError>>
         );
     }
     Ok(ts)
-}
+}*/

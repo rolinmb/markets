@@ -30,7 +30,7 @@ impl Option {
             Err(_) => 0.0,
         }
     }
-    pub fn get_delta(&self, s: f64, q: f64, d1: f64) -> f64{
+    pub fn get_delta(&self, q: f64, d1: f64) -> f64{
         if self.is_call {
             (-1.0 * q * self.yte).exp() * cnd(d1)
         } else {
@@ -40,7 +40,7 @@ impl Option {
     pub fn get_elasticity(&self, s: f64, delta: f64) -> f64 {
         delta * (s / self.last)
     }
-    pub fn get_vega(&self, iv: f64, s: f64, q: f64, d1: f64, d2: f64) -> f64 {
+    pub fn get_vega(&self, d2: f64) -> f64 {
         let vega = self.strike * npd(d2) * self.yte.sqrt();
         if vega.is_nan() {
             0.0
@@ -90,7 +90,7 @@ impl Option {
             }
         }
     }
-    pub fn get_epsilon(&self, iv: f64, s: f64, q: f64, d1: f64) -> f64 {
+    pub fn get_epsilon(&self, s: f64, q: f64, d1: f64) -> f64 {
         if self.is_call {
             let c_eps = -1.0 * s * self.strike * self.yte * (-1.0 * q * self.yte).exp() * cnd(d1);
             if c_eps.is_nan() {
