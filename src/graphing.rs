@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
-use super::avantage::tseries_from_csv;
 use super::options::chain_from_csv;
+use super::finmath::{d_one, FEDFUNDS};
 use std::process::{Command, Stdio};
 use std::io::{Write, BufWriter};
 use std::fs::File;
 
 const CDATNAME: &str = "dat_out/ctemp.dat";
 const PDATNAME: &str = "dat_out/ptemp.dat";
-
+// TODO: Finish implementation to match that of finviz-scrape repo
 pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
     let data_label: &str = "Close Price";
     let name_parts: Vec<&str> = ts_csv_name.split('/').collect();
@@ -41,7 +41,7 @@ pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_name: &str) -> Result<()> {
+pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_name: &str, &field: &u8) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
         .map_err(|e| anyhow::anyhow!("Failed to load option chain with chain_from_csv: {}", e))?;
     let tkr = &chain.ticker;
@@ -49,14 +49,136 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
     let pdatfile = File::create(PDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create pdatfile")?;
     let mut cwriter = BufWriter::new(cdatfile);
     let mut pwriter = BufWriter::new(pdatfile);
-    let data_label: &str = "Last Trade Price";
+    let data_label = match field {
+        0 => "Last Trade Price",
+        1 => "Price Change",
+        2 => "Volume",
+        3 => "Bid",
+        4 => "Ask",
+        5 => "Open Interest",
+        6 => "Strike",
+        7 => "Years To Expiration",
+        8 => "Implied Volatility",
+        9 => "Delta",
+        10 => "Elasticity",
+        11 => "Vega",
+        12 => "Theta",
+        13 => "Rho",
+        14 => "Epsilon",
+        15 => "Gamma",
+        16 => "Vanna",
+        17 => "Charm",
+        18 => "Vomma",
+        19 => "Veta",
+        20 => "Speed",
+        21 => "Zomma",
+        22 => "Color",
+        23 => "Ultima",
+        _ => "Last Trade Price",
+    };
     for expiry in &chain.expiries {
         for call in expiry.calls.iter() {
-            writeln!(cwriter, "{} {} {}", call.strike, call.yte, call.last)?;
+            let civ = call.get_imp_vol(chain.current_price, chain.div_yield);
+            let cd1 = d_one(civ, chain.current_price, call.strike, call.yte, chain.div_yield);
+            let cd2 = cd1 - (civ * call.yte.sqrt());
+            let cdata = match field {
+                0 => call.last,
+                1 => call.change,
+                2 => call.vol,
+                3 => call.bid,
+                4 => call.ask,
+                5 => call.open_int,
+                6 => call.strike,
+                7 => call.yte,
+                8 => civ,
+                9 => call.get_delta(chain.current_price, chain.div_yield, cd1),
+                10 => {
+                    let cdelta = call.get_delta(chain.current_price, chain.div_yield, cd1);
+                    call.get_elasticity(chain.current_price, cdelta)
+                },
+                11 => call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2),
+                12 => call.get_theta(civ, chain.current_price, chain.div_yield, cd1, cd2, FEDFUNDS),
+                13 => call.get_rho(cd2, FEDFUNDS),
+                14 => call.get_epsilon(civ, chain.current_price, chain.div_yield, cd1),
+                15 => call.get_gamma(civ, chain.current_price, cd2, FEDFUNDS),
+                16 => {
+                    let cvega: f64 = call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2);
+                    call.get_vanna(civ, cvega, chain.current_price, cd1)
+                },
+                17 => call.get_charm(civ, chain.div_yield, cd1, cd2, FEDFUNDS),
+                18 => {
+                    let cvega: f64 = call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2);
+                    call.get_vomma(civ, cvega, cd1, cd2)
+                },
+                19 => call.get_veta(civ, chain.current_price, chain.div_yield, cd1, cd2, FEDFUNDS),
+                20 => {
+                    let cgamma: f64 = call.get_gamma(civ, chain.current_price, cd2, FEDFUNDS);
+                    call.get_speed(civ, cgamma, cd1, cd2)
+                },
+                21 => {
+                    let cgamma: f64 = call.get_gamma(civ, chain.current_price, cd2, FEDFUNDS); 
+                    call.get_zomma(civ, cgamma, cd1, cd2)
+                },
+                22 => call.get_color(civ, chain.current_price, chain.div_yield, cd1, cd2, FEDFUNDS),
+                23 => {
+                    let cvega: f64 = call.get_vega(civ, chain.current_price, chain.div_yield, cd1, cd2);
+                    call.get_ultima(civ, cvega, cd1, cd2)
+                },
+                _ => call.last,
+            };
+            writeln!(cwriter, "{} {} {}", call.strike, call.yte, cdata)?;
         }
         writeln!(cwriter, "")?;
         for put in expiry.puts.iter() {
-            writeln!(pwriter, "{} {} {}", put.strike, put.yte, put.last)?;
+            let piv = put.get_imp_vol(chain.current_price, chain.div_yield);
+            let pd1 = d_one(piv, chain.current_price, put.strike, put.yte, chain.div_yield);
+            let pd2 = pd1 - (piv * put.yte.sqrt());
+            let pdata = match field {
+                0 => put.last,
+                1 => put.change,
+                2 => put.vol,
+                3 => put.bid,
+                4 => put.ask,
+                5 => put.open_int,
+                6 => put.strike,
+                7 => put.yte,
+                8 => piv,
+                9 => put.get_delta(chain.current_price, chain.div_yield, pd1),
+                10 => {
+                    let pdelta = put.get_delta(chain.current_price, chain.div_yield, pd1);
+                    put.get_elasticity(chain.current_price, pdelta)
+                },
+                11 => put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2),
+                12 => put.get_theta(piv, chain.current_price, chain.div_yield, pd1, pd2, FEDFUNDS),
+                13 => put.get_rho(pd2, FEDFUNDS),
+                14 => put.get_epsilon(piv, chain.current_price, chain.div_yield, pd1),
+                15 => put.get_gamma(piv, chain.current_price, pd2, FEDFUNDS),
+                16 => {
+                    let pvega: f64 = put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2);
+                    put.get_vanna(piv, pvega, chain.current_price, pd1)
+                },
+                17 => put.get_charm(piv, chain.div_yield, pd1, pd2, FEDFUNDS),
+                18 => {
+                    let pvega: f64 = put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2);
+                    put.get_vomma(piv, pvega, pd1, pd2)
+                },
+                19 => put.get_veta(piv, chain.current_price, chain.div_yield, pd1, pd2, FEDFUNDS),
+                20 => {
+                    let pgamma: f64 = put.get_gamma(piv, chain.current_price, pd2, FEDFUNDS);
+                    put.get_speed(piv, pgamma, pd1, pd2)
+                },
+                21 => {
+                    let pgamma: f64 = put.get_gamma(piv, chain.current_price, pd2, FEDFUNDS); 
+                    put.get_zomma(piv, pgamma, pd1, pd2)
+                },
+                22 => put.get_color(piv, chain.current_price, chain.div_yield, pd1, pd2, FEDFUNDS),
+                23 => {
+                    let pvega: f64 = put.get_vega(piv, chain.current_price, chain.div_yield, pd1, pd2);
+                    put.get_ultima(piv, pvega, pd1, pd2)
+                },
+                _ => put.last,
+            };
+            writeln!(pwriter, "{} {} {}", put.strike, put.yte, pdata)?;
         }
         writeln!(pwriter, "")?;
     }
@@ -66,8 +188,8 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
         r#"
         set terminal png
         set output '{}'
-        set xlabel "Strike Price ($)"
-        set ylabel "YTE"
+        set xlabel "Contract Strike Price ($)"
+        set ylabel "Years To Expiration"
         set zlabel "{}"
         set title "{} Call Options {} Surface"
         set view 25.0,275.0,1.0
@@ -89,8 +211,8 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
         r#"
         set terminal png
         set output '{}'
-        set xlabel "Strike Price"
-        set ylabel "YTE"
+        set xlabel "Contract Strike Price ($)"
+        set ylabel "Years To Expiration"
         set zlabel "{}"
         set title "{} Put Options {} Surface"
         set view 25.0,275.0,1.0

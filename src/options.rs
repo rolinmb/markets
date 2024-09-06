@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use playwright::Playwright;
 use csv::ReaderBuilder;
+use super::finmath::{cnd, npd, brentq, black_scholes};
 use std::fs::File;
 use std::error::Error;
 
@@ -19,6 +20,184 @@ pub struct Option {
     pub strike: f64,
     pub yte: f64,
     pub is_call: bool,
+}
+
+impl Option {
+    pub fn get_imp_vol(&self, s: f64, q: f64) -> f64 {
+        let f = |x: f64| black_scholes(x, s, self.strike, self.yte, q, self.is_call) - self.last;
+        match brentq(f, 0.0, 15.0, 1e-6) {
+            Ok(iv) => iv,
+            Err(_) => 0.0,
+        }
+    }
+    pub fn get_delta(&self, s: f64, q: f64, d1: f64) -> f64{
+        if self.is_call {
+            (-1.0 * q * self.yte).exp() * cnd(d1)
+        } else {
+            -1.0 * (-1.0 * q * self.yte) * cnd(d1)
+        }
+    }
+    pub fn get_elasticity(&self, s: f64, delta: f64) -> f64 {
+        delta * (s / self.last)
+    }
+    pub fn get_vega(&self, iv: f64, s: f64, q: f64, d1: f64, d2: f64) -> f64 {
+        let vega = self.strike * npd(d2) * self.yte.sqrt();
+        if vega.is_nan() {
+            0.0
+        } else {
+            vega
+        }
+    }
+    pub fn get_theta(&self, iv: f64, s: f64, q: f64, d1: f64, d2: f64, fed_funds: f64) -> f64 {
+        if self.is_call {
+            let ctheta = (-1.0 * q * self.yte).exp()
+                * ((s * npd(d1) * iv) / (2.0 * self.yte.sqrt()))
+                - fed_funds * self.strike * (-1.0 * fed_funds * self.yte).exp() * cnd(d2)
+                + q * s * (-1.0 * q * self.yte).exp() * cnd(d1);
+
+            if ctheta.is_nan() {
+                0.0
+            } else {
+                ctheta
+            }
+        } else {
+            let ptheta = (-1.0 * q * self.yte).exp()
+                * ((s * npd(d1) * iv) / (2.0 * self.yte.sqrt()))
+                + fed_funds * self.strike * (-1.0 * fed_funds * self.yte).exp() * cnd(-d2)
+                - q * s * (-1.0 * q * self.yte).exp() * cnd(-d1);
+
+            if ptheta.is_nan() {
+                0.0
+            } else {
+                ptheta
+            }
+        }
+    }
+    pub fn get_rho(&self, d2: f64, fed_funds: f64) -> f64 {
+        if self.is_call {
+            let c_rho = self.strike * self.yte * (-1.0 * fed_funds * self.yte).exp() * cnd(d2);
+            if c_rho.is_nan() {
+                0.0
+            } else {
+                c_rho
+            }
+        } else {
+            let p_rho = -1.0 * self.strike * self.yte * (-1.0 * fed_funds * self.yte).exp() * cnd(-d2);
+            if p_rho.is_nan() {
+                0.0
+            } else {
+                p_rho
+            }
+        }
+    }
+    pub fn get_epsilon(&self, iv: f64, s: f64, q: f64, d1: f64) -> f64 {
+        if self.is_call {
+            let c_eps = -1.0 * s * self.strike * self.yte * (-1.0 * q * self.yte).exp() * cnd(d1);
+            if c_eps.is_nan() {
+                0.0
+            } else {
+                c_eps
+            }
+        } else {
+            let p_eps = s * self.yte * (-1.0 * q * self.yte).exp() * cnd(-d1);
+            if p_eps.is_nan() {
+                0.0
+            } else {
+                p_eps
+            }
+        }
+    }
+    pub fn get_gamma(&self, iv: f64, s: f64, d2: f64, fed_funds: f64) -> f64 {
+        let gamma = self.strike * (-1.0 * fed_funds * self.yte).exp() * (npd(d2) / (s * s * iv * self.yte.sqrt()));
+        if gamma.is_nan() {
+            0.0
+        } else {
+            gamma
+        }
+    }
+    pub fn get_vanna(&self, iv: f64, vega: f64, s: f64, d1: f64) -> f64 {
+        let vanna = (vega / s) * (1.0 - (d1 / (iv * self.yte.sqrt())));
+        if vanna.is_nan() {
+            0.0
+        } else {
+            vanna
+        }
+    }
+    pub fn get_charm(&self, iv: f64, q: f64, d1: f64, d2: f64, fed_funds: f64) -> f64 {
+        if self.is_call {
+            let c_charm = (q * (-1.0 * q * self.yte).exp() * cnd(d1))
+                - ((-1.0 * q * self.yte).exp() * npd(d1) * ((2.0 * (fed_funds - q) * self.yte) - (d2 * iv * self.yte.sqrt()))
+                / (2.0 * self.yte * iv * self.yte.sqrt()));
+            if c_charm.is_nan() {
+                0.0
+            } else {
+                c_charm
+            }
+        } else {
+            let p_charm = (-1.0 * q * (-1.0 * q * self.yte).exp() * cnd(-d1))
+                - ((-1.0 * q * self.yte).exp() * npd(d1) * ((2.0 * (fed_funds - q) * self.yte) - (d2 * iv * self.yte.sqrt()))
+                / (2.0 * self.yte * iv * self.yte.sqrt()));
+            if p_charm.is_nan() {
+                0.0
+            } else {
+                p_charm
+            }
+        }
+    }
+    pub fn get_vomma(&self, iv: f64, vega: f64, d1: f64, d2: f64) -> f64 {
+        let vomma = (vega * d1 * d2) / iv;
+        if vomma.is_nan() {
+            0.0
+        } else {
+            vomma
+        }
+    }
+    pub fn get_veta(&self, iv: f64, s: f64, q: f64, d1: f64, d2: f64, fed_funds: f64) -> f64 {
+        let factor = -1.0 * s * (-1.0 * q * self.yte).exp() * npd(d1) * self.yte.sqrt();
+        let veta = factor * (q + (((fed_funds - q) * d1) / (iv * self.yte.sqrt()))
+            - ((1.0 + (d1 * d2)) / (2.0 * self.yte)));
+        if veta.is_nan() {
+            0.0
+        } else {
+            veta
+        }
+    }
+    pub fn get_speed(&self, iv: f64, gamma: f64, s: f64, d1: f64) -> f64 {
+        let speed = (-1.0 * gamma / s) * ((d1 / (iv * self.yte.sqrt())) + 1.0);
+        if speed.is_nan() {
+            0.0
+        } else {
+            speed
+        }
+    }
+    pub fn get_zomma(&self, iv: f64, gamma: f64, d1: f64, d2: f64) -> f64 {
+        let zomma = gamma * (((d1 * d2) - 1.0) / iv);
+        if zomma.is_nan() {
+            0.0
+        } else {
+            zomma
+        }
+    }
+    pub fn get_color(&self, iv: f64, s: f64, q: f64, d1: f64, d2: f64, fed_funds: f64) -> f64 {
+        let factor1 = -1.0 * (-1.0 * q * self.yte).exp() * npd(d1) / (2.0 * s * self.yte * iv * self.yte.sqrt());
+        let factor2 = (((2.0 * (fed_funds - q) * self.yte) - (d2 * iv * self.yte.sqrt()))
+            / (iv * self.yte.sqrt())) * d1;
+        let color = factor1 * ((2.0 * q * self.yte) + 1.0 + factor2);
+        if color.is_nan() {
+            0.0
+        } else {
+            color
+        }
+    }
+    pub fn get_ultima(&self, iv: f64, vega: f64, d1: f64, d2: f64) -> f64 {
+        let factor = (-1.0 * vega) / (iv * iv);
+        let ultima = factor * (((d1 * d2) * (1.0 - (d1 * d2))) + (d1 * d1) + (d2 * d2));
+        if ultima.is_nan() {
+            0.0
+        } else {
+            ultima
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

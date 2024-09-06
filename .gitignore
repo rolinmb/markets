@@ -1,6 +1,7 @@
 /target
 Cargo.lock
 av_key.txt
+tickers_list.txt
 /csv_out
 /img_out
 /pdf_out
