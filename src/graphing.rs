@@ -7,6 +7,7 @@ use std::fs::File;
 
 const CDATNAME: &str = "dat_out/ctemp.dat";
 const PDATNAME: &str = "dat_out/ptemp.dat";
+pub const IMGDIR: &str = "img_out/";
 // TODO: Finish implementation to match that of finviz-scrape repo
 pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
     let data_label: &str = "Close Price";
@@ -41,41 +42,44 @@ pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_name: &str, &field: &u8) -> Result<()> {
+pub fn generate_surface_plot(chain_csv_name: &str, &field: &u8) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
         .map_err(|e| anyhow::anyhow!("Failed to load option chain with chain_from_csv: {}", e))?;
-    let tkr = &chain.ticker;
     let cdatfile = File::create(CDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create cdatfile")?;
     let pdatfile = File::create(PDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create pdatfile")?;
     let mut cwriter = BufWriter::new(cdatfile);
     let mut pwriter = BufWriter::new(pdatfile);
     let data_label = match field {
-        0 => "Last Trade Price",
-        1 => "Price Change",
-        2 => "Volume",
-        3 => "Bid",
-        4 => "Ask",
-        5 => "Open Interest",
-        6 => "Strike",
-        7 => "Years To Expiration",
-        8 => "Implied Volatility",
-        9 => "Delta",
-        10 => "Elasticity",
-        11 => "Vega",
-        12 => "Theta",
-        13 => "Rho",
-        14 => "Epsilon",
-        15 => "Gamma",
-        16 => "Vanna",
-        17 => "Charm",
-        18 => "Vomma",
-        19 => "Veta",
-        20 => "Speed",
-        21 => "Zomma",
-        22 => "Color",
-        23 => "Ultima",
-        _ => "Last Trade Price",
+        0 => "last",
+        1 => "change",
+        2 => "volume",
+        3 => "bid",
+        4 => "ask",
+        5 => "oi",
+        6 => "strike",
+        7 => "yte",
+        8 => "iv",
+        9 => "delta",
+        10 => "elasticity",
+        11 => "vega",
+        12 => "theta",
+        13 => "rho",
+        14 => "epsilon",
+        15 => "gamma",
+        16 => "vanna",
+        17 => "charm",
+        18 => "vomma",
+        19 => "veta",
+        20 => "speed",
+        21 => "zomma",
+        22 => "color",
+        23 => "ultima",
+        _ => "last",
     };
+    let name_parts: Vec<&str> = chain_csv_name.split('/').collect();
+    let info_parts: Vec<&str> = name_parts[1].split('_').collect();
+    let call_png_name = format!("{}{}_c{}_{}_{}.png", IMGDIR, &chain.ticker, data_label, info_parts[2], info_parts[3].replace(".csv", ""));
+    let put_png_name = format!("{}{}_p{}_{}_{}.png", IMGDIR, &chain.ticker, data_label, info_parts[2], info_parts[3].replace(".csv", ""));
     for expiry in &chain.expiries {
         for call in expiry.calls.iter() {
             let civ = call.get_imp_vol(chain.current_price, chain.div_yield);
@@ -195,7 +199,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
         set view 25.0,275.0,1.0
         set palette rgb 7,5,15
         splot '{}' using 1:2:3 with points palette title "Calls"
-    "#, call_png_name, data_label, tkr, data_label, CDATNAME
+    "#, call_png_name, data_label, &chain.ticker, data_label, CDATNAME
     );
     let mut cmd_call = Command::new("gnuplot")
         .stdin(Stdio::piped())
@@ -218,7 +222,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, call_png_name: &str, put_png_
         set view 25.0,275.0,1.0
         set palette rgb 7,5,15
         splot '{}' using 1:2:3 with points palette title "Puts"
-    "#, put_png_name, data_label, tkr, data_label, PDATNAME
+    "#, put_png_name, data_label, &chain.ticker, data_label, PDATNAME
     );
     let mut cmd_put = Command::new("gnuplot")
         .stdin(Stdio::piped())
