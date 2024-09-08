@@ -7,7 +7,7 @@ mod finmath;
 mod options;
 use options::{fetch_option_chain};
 mod graphing;
-use graphing::{IMGDIR, generate_tseries_plot, generate_surface_plot};
+use graphing::{generate_tseries_plot, generate_surface_plot};
 mod utils;
 use utils::{clear_directory_or_create, create_directory_if_dne};
 use std::env;
@@ -34,13 +34,12 @@ fn main() {
         let fv_csv = format!("{}{}_fv_{}.csv", CSVDIR, uticker, datetime_str);
         let av_csv = format!("{}{}_av_{}.csv", CSVDIR, uticker, datetime_str);
         let oc_csv = format!("{}{}_oc_{}.csv", CSVDIR, uticker, datetime_str);
-        let hist_png = format!("{}{}_history_{}.png", IMGDIR, uticker, datetime_str);
         let _ = fetch_finviz_info(&uticker, &fv_csv);
         let _ = get_underlying_av(&uticker, &av_csv);
         let _ = fetch_option_chain(&uticker, &oc_csv);
-        let _ = generate_tseries_plot(&av_csv, &hist_png);
+        let _ = generate_tseries_plot(&av_csv, 0 as usize);
         for plot_field in 0..24 {
-            let _ = generate_surface_plot(&oc_csv, &(plot_field as u8));
+            let _ = generate_surface_plot(&oc_csv, plot_field);
         }
     } else {
         eprintln!("\nmain() :: ERROR -> Please enter a financial ticker/symbol that is at most 4 alphabetical characters; you entered '{}'", ticker);

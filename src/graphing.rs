@@ -8,11 +8,27 @@ use std::fs::File;
 const CDATNAME: &str = "dat_out/ctemp.dat";
 const PDATNAME: &str = "dat_out/ptemp.dat";
 pub const IMGDIR: &str = "img_out/";
-// TODO: Finish implementation to match that of finviz-scrape repo
-pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
-    let data_label: &str = "Close Price";
+// TODO
+pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
+    let data_label = match field {
+        0 => "Close",
+        1 => "Open",
+        2 => "Low",
+        3 => "High",
+        4 => "Vol",
+        5 => "Change",
+        6 => "%Change",
+        7 => "Range",
+        8 => "AvgTrueRange",
+        9 => "RealizedVol",
+        10 => "FiniteDiff",
+        11 => "LinearReg",
+        _ => "Close",
+    };
     let name_parts: Vec<&str> = ts_csv_name.split('/').collect();
-    let ticker = name_parts[1].split('_').collect::<Vec<&str>>()[0];
+    let info_parts = name_parts[1].split('_').collect::<Vec<&str>>();
+    let ticker = info_parts[0];
+    let png_name = format!("{}{}_{}_{}_{}.png", IMGDIR, ticker, data_label, info_parts[2], info_parts[3].replace(".csv", ""));
     let gnuplot_script = format!(
         r#"
         set terminal png
@@ -27,8 +43,8 @@ pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
         set grid
         set logscale y
         set key autotitle columnheader
-        plot '{}' using "Date":"Close" with lines title '{}'
-        "#, png_name, data_label, ticker, data_label, ts_csv_name, data_label);
+        plot '{}' using "Date":"{}" with lines title '{}'
+        "#, png_name, data_label, ticker, data_label, ts_csv_name, data_label, data_label);
     let mut cmd_gnuplot = Command::new("gnuplot")
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
@@ -42,7 +58,7 @@ pub fn generate_tseries_plot(ts_csv_name: &str, png_name: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn generate_surface_plot(chain_csv_name: &str, &field: &u8) -> Result<()> {
+pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
         .map_err(|e| anyhow::anyhow!("\ngenerate_surface_plot() :: ERROR -> Failed to load option chain with chain_from_csv: {}", e))?;
     let cdatfile = File::create(CDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create cdatfile")?;
