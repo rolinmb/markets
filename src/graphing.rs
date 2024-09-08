@@ -35,7 +35,7 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
         _ => binding.as_str(),
     };
     let png_name = format!("{}{}_{}_{}_{}.png", IMGDIR, ticker, png_name_label, info_parts[2], info_parts[3].replace(".csv", ""));
-    let gnuplot_script = format!(
+    let mut gnuplot_script = format!(
         r#"
         set terminal png
         set output '{}'
