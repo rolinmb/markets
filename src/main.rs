@@ -37,7 +37,7 @@ fn main() {
         let _ = fetch_finviz_info(&uticker, &fv_csv);
         let _ = get_underlying_av(&uticker, &av_csv);
         let _ = fetch_option_chain(&uticker, &oc_csv);
-        for series_field in 0..12 {
+        for series_field in 0..11 {
             let _ = generate_tseries_plot(&av_csv, series_field);
         }
         for plot_field in 0..24 {

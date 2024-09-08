@@ -22,7 +22,6 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
         8 => "AvgTrueRange",
         9 => "RealizedVol",
         10 => "FiniteDiff",
-        11 => "LinearReg",
         _ => "Close",
     };
     let name_parts: Vec<&str> = ts_csv_name.split('/').collect();
@@ -52,6 +51,12 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
         set key autotitle columnheader
         plot '{}' using "Date":"{}" with lines title '{}'
         "#, png_name, data_label, ticker, data_label, ts_csv_name, data_label, data_label);
+    if field == 0 || field == 1 || field == 2 || field == 3 {
+        gnuplot_script.push_str(&format!(
+            ", '{}' using \"Date\":\"LinearReg\" with lines title 'Linear Regression'",
+            ts_csv_name
+        ));
+    }    
     let mut cmd_gnuplot = Command::new("gnuplot")
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
