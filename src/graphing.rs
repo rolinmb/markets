@@ -8,14 +8,14 @@ use std::fs::File;
 const CDATNAME: &str = "dat_out/ctemp.dat";
 const PDATNAME: &str = "dat_out/ptemp.dat";
 pub const IMGDIR: &str = "img_out/";
-// TODO
+
 pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
     let data_label = match field {
         0 => "Close",
         1 => "Open",
         2 => "Low",
         3 => "High",
-        4 => "Vol",
+        4 => "Volume",
         5 => "Change",
         6 => "%Change",
         7 => "Range",
@@ -28,7 +28,14 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
     let name_parts: Vec<&str> = ts_csv_name.split('/').collect();
     let info_parts = name_parts[1].split('_').collect::<Vec<&str>>();
     let ticker = info_parts[0];
-    let png_name = format!("{}{}_{}_{}_{}.png", IMGDIR, ticker, data_label, info_parts[2], info_parts[3].replace(".csv", ""));
+    let binding = data_label.to_lowercase();
+    let png_name_label = match data_label {
+        "%Change" => {
+            "perchange"
+        },
+        _ => binding.as_str(),
+    };
+    let png_name = format!("{}{}_{}_{}_{}.png", IMGDIR, ticker, png_name_label, info_parts[2], info_parts[3].replace(".csv", ""));
     let gnuplot_script = format!(
         r#"
         set terminal png

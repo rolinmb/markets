@@ -37,7 +37,9 @@ fn main() {
         let _ = fetch_finviz_info(&uticker, &fv_csv);
         let _ = get_underlying_av(&uticker, &av_csv);
         let _ = fetch_option_chain(&uticker, &oc_csv);
-        let _ = generate_tseries_plot(&av_csv, 0 as usize);
+        for series_field in 0..12 {
+            let _ = generate_tseries_plot(&av_csv, series_field);
+        }
         for plot_field in 0..24 {
             let _ = generate_surface_plot(&oc_csv, plot_field);
         }
