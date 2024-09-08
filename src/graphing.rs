@@ -49,8 +49,8 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
         set grid
         set logscale y
         set key autotitle columnheader
-        plot '{}' using "Date":"{}" with lines title '{}'
-        "#, png_name, data_label, ticker, data_label, ts_csv_name, data_label, data_label);
+        plot '{}' using "Date":"{}" with lines title '{}'"#,
+        png_name, data_label, ticker, data_label, ts_csv_name, data_label, data_label);
     if field == 0 || field == 1 || field == 2 || field == 3 {
         gnuplot_script.push_str(&format!(
             ", '{}' using \"Date\":\"LinearReg\" with lines title 'Linear Regression'",
