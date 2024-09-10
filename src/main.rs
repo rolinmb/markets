@@ -10,8 +10,9 @@ mod graphing;
 use graphing::{generate_tseries_plot, generate_surface_plot};
 mod utils;
 use utils::{clear_directory_or_create, create_directory_if_dne};
-use std::env;
 use std::process::{Command, exit};
+use std::env;
+use std::str;
 
 const CSVDIR: &str = "csv_out/";
 
@@ -26,8 +27,8 @@ fn main() {
         let _ = create_directory_if_dne("csv_out");
         let _ = create_directory_if_dne("pdf_out");
         let _ = create_directory_if_dne("img_out");
-        let _ = clear_directory_or_create("dat_out");
-        let _ = clear_directory_or_create("html_out");
+        let _ = create_directory_if_dne("dat_out");
+        let _ = create_directory_if_dne("html_out");
         let uticker = ticker.to_uppercase();
         let now = Local::now();
         let datetime_str = now.format("%Y-%m-%d_%H-%M-%S").to_string();
@@ -43,10 +44,21 @@ fn main() {
         for plot_field in 0..24 {
             let _ = generate_surface_plot(&oc_csv, plot_field);
         }
-        let _pdf_cmd = Command::new("cmd")
+        let pdf_cmd = Command::new("cmd")
             .args(["/C", "python", "scripts/main.py", &uticker, &datetime_str])
             .output()
-            .expect("\nmain() :: ERROR -> Failed to execute _pdf_cmd");
+            .expect("\nmain() :: ERROR -> Failed to execute pdf_cmd");
+        let stdout = str::from_utf8(&pdf_cmd.stdout).expect("\nmain() :: ERROR -> Invalif UTF-8 sequence in string");
+        let stderr = str::from_utf8(&pdf_cmd.stderr).expect("\nmain() :: ERROR -> Invalif UTF-8 sequence in string");
+        if pdf_cmd.status.success() {
+            println!("\nmain() :: Successfully executed pdf_cmd / called scripts/main.py to generate PDF:\n\n{}\n", stdout);
+            let _ = clear_directory_or_create("img_out");
+            let _ = clear_directory_or_create("dat_out");
+            let _ = clear_directory_or_create("html_out");
+        } else {
+            eprintln!("\nmain() :: ERROR -> PDF Generation failed with status: {:?}\n\n{}\n", pdf_cmd.status, stderr);
+            exit(1);
+        }
     } else {
         eprintln!("\nmain() :: ERROR -> Please enter a financial ticker/symbol that is at most 4 alphabetical characters; you entered '{}'", ticker);
         exit(1);
