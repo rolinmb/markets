@@ -11,7 +11,7 @@ use graphing::{generate_tseries_plot, generate_surface_plot};
 mod utils;
 use utils::{clear_directory_or_create, create_directory_if_dne};
 use std::env;
-use std::process::exit;
+use std::process::{Command, exit};
 
 const CSVDIR: &str = "csv_out/";
 
@@ -43,6 +43,10 @@ fn main() {
         for plot_field in 0..24 {
             let _ = generate_surface_plot(&oc_csv, plot_field);
         }
+        let _pdf_cmd = Command::new("cmd")
+            .args(["/C", "python", "scripts/main.py", &uticker, &datetime_str])
+            .output()
+            .expect("\nmain() :: ERROR -> Failed to execute _pdf_cmd");
     } else {
         eprintln!("\nmain() :: ERROR -> Please enter a financial ticker/symbol that is at most 4 alphabetical characters; you entered '{}'", ticker);
         exit(1);
