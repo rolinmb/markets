@@ -226,7 +226,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
         set ylabel "Years To Expiration"
         set zlabel "{}"
         set title "{} Call Options {} Surface"
-        set view 25.0,275.0,1.0
+        set view 20.0,0.0,1.0
         set palette rgb 7,5,15
         splot '{}' using 1:2:3 with points palette title "Calls"
     "#, call_png_name, data_label, &chain.ticker, data_label, CDATNAME
@@ -249,7 +249,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
         set ylabel "Years To Expiration"
         set zlabel "{}"
         set title "{} Put Options {} Surface"
-        set view 0.0,275.0,1.0
+        set view 20.0,0.0,1.0
         set palette rgb 7,5,15
         splot '{}' using 1:2:3 with points palette title "Puts"
     "#, put_png_name, data_label, &chain.ticker, data_label, PDATNAME

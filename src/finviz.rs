@@ -73,48 +73,40 @@ fn compute_additional_financials(data: &HashMap<String, String>) -> HashMap<Stri
     if let (Some(dividend), Some(price)) = (data.get("Dividend TTM"), data.get("Price")) {
         if let (Ok(dividend), Ok(price)) = (dividend.parse::<f64>(), price.parse::<f64>()) {
             if price != 0.0 {
-            let dividend_yield = (dividend / price) * 100.0;
-            metrics.insert("Dividend Yield".to_string(), format!("{:.2}%", dividend_yield));
+                let dividend_yield = (dividend / price) * 100.0;
+                metrics.insert("Dividend Yield".to_string(), format!("{:.2}%", dividend_yield));
             }
         }
     }
     if let (Some(dividend), Some(eps)) = (data.get("Dividend TTM"), data.get("EPS (ttm)")) {
         if let (Ok(dividend), Ok(eps)) = (dividend.parse::<f64>(), eps.parse::<f64>()) {
             if eps != 0.0 {
-            let payout_ratio = (dividend / eps) * 100.0;
-            metrics.insert("Dividend Payout Ratio".to_string(), format!("{:.2}%", payout_ratio));
+                let payout_ratio = (dividend / eps) * 100.0;
+                metrics.insert("Dividend Payout Ratio".to_string(), format!("{:.2}%", payout_ratio));
             }
         }
     }
     if let (Some(sales), Some(total_assets)) = (data.get("Sales"), data.get("Market Cap")) {
         if let (Ok(sales), Ok(total_assets)) = (parse_finval(sales), parse_finval(total_assets)) {
             if total_assets != 0.0 {
-            let asset_turnover = sales / total_assets;
-            metrics.insert("Asset Turnover Ratio (ATR)".to_string(), format!("{:.2}", asset_turnover));
+                let asset_turnover = sales / total_assets;
+                metrics.insert("Asset Turnover Ratio (ATR)".to_string(), format!("{:.2}", asset_turnover));
             }
         }
     }
     if let (Some(net_income), Some(total_assets)) = (data.get("Income"), data.get("Market Cap")) {
         if let (Ok(net_income), Ok(total_assets)) = (parse_finval(net_income), parse_finval(total_assets)) {
             if total_assets != 0.0 {
-            let rota = (net_income / total_assets) * 100.0;
-            metrics.insert("Return on Total Assets (ROTA)".to_string(), format!("{:.2}%", rota));
-            }
-        }
-    }
-    if let (Some(p_fcf), Some(market_cap)) = (data.get("P/FCF"), data.get("Market Cap")) {
-        if let (Ok(p_fcf), Ok(market_cap)) = (p_fcf.parse::<f64>(), parse_finval(market_cap)) {
-            if p_fcf != 0.0 {
-            let free_cash_flow_yield = 100.0 / p_fcf;
-            metrics.insert("Free Cash Flow Yield (FCFY)".to_string(), format!("{:.2}%", free_cash_flow_yield));
+                let rota = (net_income / total_assets) * 100.0;
+                metrics.insert("Return on Total Assets (ROTA)".to_string(), format!("{:.2}%", rota));
             }
         }
     }
     if let (Some(eps), Some(price)) = (data.get("EPS (ttm)"), data.get("Price")) {
         if let (Ok(eps), Ok(price)) = (eps.parse::<f64>(), price.parse::<f64>()) {
             if price != 0.0 {
-            let earnings_yield = (eps / price) * 100.0;
-            metrics.insert("Earnings Yield (EPS/Share Price)".to_string(), format!("{:.2}%", earnings_yield));
+                let earnings_yield = (eps / price) * 100.0;
+                metrics.insert("Earnings Yield (EPS/Share Price)".to_string(), format!("{:.2}%", earnings_yield));
             }
         }
     }
