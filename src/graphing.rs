@@ -29,9 +29,10 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
     let ticker = info_parts[0];
     let binding = data_label.to_lowercase();
     let png_name_label = match data_label {
-        "%Change" => {
-            "perchange"
-        },
+        "%Change" => "perchange",
+        "AvgTrueRange" => "atr",
+        "RealizedVol" => "rvol",
+        "FiniteDiff" => "bfd",
         _ => binding.as_str(),
     };
     let png_name = format!("{}{}_{}_{}_{}.png", IMGDIR, ticker, png_name_label, info_parts[2], info_parts[3].replace(".csv", ""));
@@ -50,7 +51,8 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
         set logscale y
         set key autotitle columnheader
         plot '{}' using "Date":"{}" with lines title '{}'"#,
-        png_name, data_label, ticker, data_label, ts_csv_name, data_label, data_label);
+        png_name, data_label, ticker, data_label, ts_csv_name, data_label, data_label
+    );
     if field == 0 || field == 1 || field == 2 || field == 3 {
         gnuplot_script.push_str(&format!(
             ", '{}' using \"Date\":\"LinearReg\" with lines title 'Linear Regression'",
