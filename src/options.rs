@@ -24,6 +24,29 @@ pub struct Option {
 }
 
 impl Option {
+    /*pub fn new(
+        last: f64,
+        change: f64,
+        vol: f64,
+        bid: f64,
+        ask: f64,
+        open_int: f64,
+        strike: f64,
+        yte: f64,
+        is_call: bool,
+    ) -> Self {
+        Option {
+            last: last,
+            change: change,
+            vol: vol,
+            bid: bid,
+            ask: ask,
+            open_int: open_int,
+            strike: strike,
+            yte: yte,
+            is_call: is_call,
+        }
+    }*/
     pub fn get_imp_vol(&self, s: f64, q: f64) -> f64 {
         let f = |x: f64| black_scholes(x, s, self.strike, self.yte, q, self.is_call) - self.last;
         match brentq(f, 0.0, 15.0, 1e-6) {
@@ -197,6 +220,22 @@ impl Option {
             0.0
         } else {
             ultima
+        }
+    }
+}
+
+impl Default for Option {
+    fn default() -> Self {
+        Option {
+            last: 0.0,
+            change: 0.0,
+            vol: 0.0,
+            bid: 0.0,
+            ask: 0.0,
+            open_int: 0.0,
+            strike: 0.0,
+            yte: 0.0,
+            is_call: false,
         }
     }
 }
@@ -481,15 +520,15 @@ pub fn chain_from_csv(csv_file: &str) -> Result<OptionChain, Box<dyn Error>> {
             };
         }
         let opt = Option {
-            last,
-            change,
-            vol,
-            bid,
-            ask,
-            open_int,
-            strike,
-            yte,
-            is_call,
+            last: last,
+            change: change,
+            vol: vol,
+            bid: bid,
+            ask: ask,
+            open_int: open_int,
+            strike: strike,
+            yte: yte,
+            is_call: is_call,
         };
         if is_call {
             current_expiry.calls.push(opt);
@@ -507,4 +546,53 @@ pub fn chain_from_csv(csv_file: &str) -> Result<OptionChain, Box<dyn Error>> {
         div_yield,
     };
     Ok(option_chain)
+}
+
+pub fn get_atm_options(chain_csv_name: &str, cp_flag: bool) -> (Option, Option) {
+    let chain = match chain_from_csv(chain_csv_name) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("\nget_atm_options() :: ERROR -> Failed to load option chain with chain_from_csv: {}", e);
+            return (Option::default(), Option::default());
+        }
+    };
+    let mut otm: Option = Option::default();
+    let mut itm: Option = Option::default();
+    if cp_flag {
+        for (i, call) in chain.expiries[0].calls.iter().enumerate() {
+            if call.strike > chain.current_price {
+                otm = call.clone();
+                itm = chain.expiries[0].calls[i - 1].clone();
+                break;
+            }
+        }
+    } else {
+        for (j, put) in chain.expiries[0].puts.iter().enumerate() {
+            if put.strike > chain.current_price {
+                otm = chain.expiries[0].puts[j - 1].clone();
+                itm = put.clone();
+                break;
+            }
+        }
+    }
+    (otm, itm)
+}
+
+pub fn get_atm_straddle(chain_csv_name: &str) -> (f64, Option, Option) {
+    let (atm_call, _otm_call) = get_atm_options(chain_csv_name, true);
+    let (atm_put, _otm_put) = get_atm_options(chain_csv_name, false);
+    let straddle_value = atm_call.last + atm_put.last;
+    (straddle_value, atm_call, atm_put)
+}
+
+pub fn get_atm_credit_spread(chain_csv_name: &str, cp_flag: bool) -> (f64, Option, Option) {
+    let (otm, itm) = get_atm_options(chain_csv_name, cp_flag);
+    let credit_spread_value = itm.last - otm.last;
+    (credit_spread_value, otm, itm)
+}
+
+pub fn get_atm_debit_spread(chain_csv_name: &str, cp_flag: bool) -> (f64, Option, Option) {
+    let (otm, itm) = get_atm_options(chain_csv_name, cp_flag);
+    let debit_spread_value = otm.last - itm.last;
+    (debit_spread_value, otm, itm)
 }
