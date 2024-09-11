@@ -75,6 +75,8 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
 pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
         .map_err(|e| anyhow::anyhow!("\ngenerate_surface_plot() :: ERROR -> Failed to load option chain with chain_from_csv: {}", e))?;
+    let name_parts: Vec<&str> = chain_csv_name.split('/').collect();
+    let info_parts: Vec<&str> = name_parts[1].split('_').collect();
     let cdatfile = File::create(CDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create cdatfile")?;
     let pdatfile = File::create(PDATNAME).context("\ngenerate_surface_plot() :: ERROR -> Failed to create pdatfile")?;
     let mut cwriter = BufWriter::new(cdatfile);
@@ -106,8 +108,6 @@ pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
         23 => "ultima",
         _ => "last",
     };
-    let name_parts: Vec<&str> = chain_csv_name.split('/').collect();
-    let info_parts: Vec<&str> = name_parts[1].split('_').collect();
     let call_png_name = format!("{}{}_c{}_{}_{}.png", IMGDIR, &chain.ticker, data_label, info_parts[2], info_parts[3].replace(".csv", ""));
     let put_png_name = format!("{}{}_p{}_{}_{}.png", IMGDIR, &chain.ticker, data_label, info_parts[2], info_parts[3].replace(".csv", ""));
     for expiry in &chain.expiries {
@@ -264,5 +264,72 @@ pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
     writeln!(stdin, "{}", gnuplot_pscript).context("\ngenerate_surface_plot() :: ERROR -> Failed to write gnuplot_pscript to stdin for put surface")?;
     cmd_put.wait().context("\ngenerate_surface_plot() :: ERROR -> Failed to wait for gnuplot put surface generation process")?;    
     println!("\ngenerate_surface_plot() :: Successfully generated {}", put_png_name);
+    Ok(())
+}
+
+pub fn plot_volatility_smiles(chain_csv_name: &str) -> Result<()> {
+    let chain = chain_from_csv(chain_csv_name)
+        .map_err(|e| anyhow::anyhow!("\nplot_volatility_smiles() :: ERROR -> Failed to load option chain with chain_from_csv: {}", e))?;
+    let name_parts: Vec<&str> = chain_csv_name.split('/').collect();
+    let info_parts: Vec<&str> = name_parts[1].split('_').collect();
+    let cdatfile = File::create(CDATNAME).context("\nplot_volatility_smiles() :: ERROR -> Failed to create cdatfile")?;
+    let pdatfile = File::create(PDATNAME).context("\nplot_volatility_smiles() :: ERROR -> Failed to create pdatfile")?;
+    let mut cwriter = BufWriter::new(cdatfile);
+    let mut pwriter = BufWriter::new(pdatfile);
+    let exp_date = &chain.expiries[0].date;
+    for call in &chain.expiries[0].calls {
+        let civ = call.get_imp_vol(chain.current_price, chain.div_yield);
+        writeln!(cwriter, "{} {}", call.strike, civ)?;
+    }
+    cwriter.flush()?;
+    for put in &chain.expiries[0].puts {
+        let piv = put.get_imp_vol(chain.current_price, chain.div_yield);
+        writeln!(pwriter, "{} {}", put.strike, piv)?;
+    }
+    pwriter.flush()?;
+    let call_png_name = format!("{}{}_volsmile_{}_{}.png", IMGDIR, &chain.ticker, info_parts[2], info_parts[3].replace(".csv", ""));
+    let put_png_name = format!("{}{}_volsmile_{}_{}.png", IMGDIR, &chain.ticker, info_parts[2], info_parts[3].replace(".csv", ""));
+    let gnuplot_cscript = format!(
+        r#"
+        set terminal png
+        set output '{}'
+        set xlabel "Strike Price ($)"
+        set ylabel "Implied Volatility"
+        set title "{} Calls Volatility Smile (Expiring {})"
+        set grid
+        plot '{}' using 1:2 with lines title 'Implied Volatility'
+        "#, call_png_name, &chain.ticker, exp_date, CDATNAME
+    );
+    let mut cmd_call = Command::new("gnuplot")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .context("\nplot_volatility_smiles() :: ERROR -> Failed to execute gnuplot call volatility smile command")?;
+    let stdin = cmd_call.stdin.as_mut().context("\nplot_volatility_smiles() :: ERROR -> Failed to open stdin for gnuplot call volatility smile script")?;
+    writeln!(stdin, "{}", gnuplot_cscript).context("\nplot_volatility_smiles() :: ERROR -> Failed to write gnuplot call volatility smile script to stdin")?;
+    cmd_call.wait().context("\nplot_volatility_smiles() :: ERROR -> Failed to wait for gnuplot call volatility smile process")?;
+    println!("\nplot_volatility_simles() :: Successfully generated {}", call_png_name);
+    let gnuplot_pscript = format!(
+        r#"
+        set terminal png
+        set output '{}'
+        set xlabel "Strike Price ($)"
+        set ylabel "Implied Volatility"
+        set title "{} Puts Voliatility Smile (Expiring {})"
+        set grid
+        plot '{}' using 1:2 with lines title 'Implied Volatilty'
+        "#, put_png_name, &chain.ticker, exp_date, PDATNAME
+    );
+    let mut cmd_put = Command::new("gnuplot")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .context("\nplot_volatility_smiles() :: ERROR -> Failed to execute gnuplot put volatility smile command")?;
+    let stdin = cmd_put.stdin.as_mut().context("\nplot_volatility_smiles() :: ERROR -> Failed to open stdin for gnuplot put volatility smile script")?;
+    writeln!(stdin, "{}", gnuplot_pscript).context("\nplot_volatility_smiles() :: ERROR -> Failed to write gnuplot put volatility smile script to stdin")?;
+    cmd_call.wait().context("\nplot_volatility_smiles() :: ERROR -> Failed to wait for gnuplot put volatility smile process")?;
+    println!("\nplot_volatility_simles() :: Successfully generated {}", put_png_name);
     Ok(())
 }

@@ -7,7 +7,7 @@ mod finmath;
 mod options;
 use options::{fetch_option_chain};
 mod graphing;
-use graphing::{generate_tseries_plot, generate_surface_plot};
+use graphing::{generate_tseries_plot, generate_surface_plot, plot_volatility_smiles};
 mod utils;
 use utils::{clear_directory_or_create, create_directory_if_dne};
 use std::process::{Command, exit};
@@ -44,6 +44,7 @@ fn main() {
         for plot_field in 0..24 {
             let _ = generate_surface_plot(&oc_csv, plot_field);
         }
+        let _ = plot_volatility_smiles(&oc_csv);
         let pdf_cmd = Command::new("cmd")
             .args(["/C", "python", "scripts/main.py", &uticker, &datetime_str])
             .output()
