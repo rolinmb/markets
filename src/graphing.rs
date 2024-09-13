@@ -65,7 +65,7 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
         ));
     } else if field == 10 {
         gnuplot_script.push_str(&format!(
-            ", '{}' using \"Date\":\"FiniteDiffLinearReg\" with lienas title 'Linear Regression'",
+            ", '{}' using \"Date\":\"FiniteDiffLinearReg\" with lines title 'Linear Regression'",
             ts_csv_name
         ));
     }
