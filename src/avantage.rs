@@ -189,10 +189,48 @@ fn linear_regression(t_series: &TimeSeries, idx: usize) -> f64 {
     (m / b) * price + (mean_y - (m / b) * mean_x)
 }
 
+fn field_linear_regression_helper(values: &[f64]) -> f64 {
+    let data_len = values.len();
+    if data_len == 0 {
+        return 0.0;
+    }
+    let x: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
+    linear_regression(&TimeSeries {
+        meta_data: MetaData {
+            information: String::new(),
+            symbol: String::new(),
+            last_refreshed: String::new(),
+            output_size: String::new(),
+            time_zone: String::new(),
+        },
+        ohlcv: x.into_iter().enumerate().map(|(i, xi)| (
+            (i + 1).to_string(),
+            DayData {
+                open: xi.to_string(),
+                high: xi.to_string(),
+                low: xi.to_string(),
+                close: values[i].to_string(),
+                volume: String::new(),
+            }
+        )).collect(),
+    }, data_len - 1)
+}
+
+fn linear_regression_of_field<F>(t_series: &TimeSeries, field_fn: F) -> f64
+where
+    F: Fn(&DayData) -> f64,
+{
+    let values: Vec<f64> = t_series.ohlcv.values().map(|day_data| field_fn(day_data)).collect();
+    field_linear_regression_helper(&values)
+}
+
 fn tseries_to_csv(t_series: &TimeSeries, filename: &str) -> Result<(), Box<dyn StdError>> {
     let file = File::create(filename)?;
     let mut writer = csv::WriterBuilder::new().from_writer(file);
-    let _ = writer.write_record(&["LastRefreshed", "Date", "Open", "High", "Low", "Close", "Volume", "Change", "%Change", "Range", "AvgTrueRange", "RealizedVol", "FiniteDiff", "LinearReg"])?;
+    let _ = writer.write_record(&[
+        "LastRefreshed", "Date", "Open", "High", "Low", "Close", "Volume", "Change", "ChangeLinearReg", "%Change",
+        "Range", "AvgTrueRange", "RealizedVol", "FiniteDiff", "FiniteDiffLinearReg", "LinearReg"
+    ])?;
     let mut data_up_to_date = TimeSeries {
         meta_data: t_series.meta_data.clone(),
         ohlcv: BTreeMap::new(),
@@ -201,14 +239,24 @@ fn tseries_to_csv(t_series: &TimeSeries, filename: &str) -> Result<(), Box<dyn S
     for date in sorted_dates {
         if let Some(day_data) = t_series.ohlcv.get(&date) {
             data_up_to_date.ohlcv.insert(date.clone(), day_data.clone());
+            let fclose = day_data.close.parse::<f64>().unwrap_or(0.0);
+            let fopen = day_data.open.parse::<f64>().unwrap_or(0.0);
+            let change = fclose - fopen;
+            let change_linear_reg = linear_regression_of_field(&data_up_to_date, |day_data| {
+                let close_val = day_data.close.parse::<f64>().unwrap_or(0.0);
+                let open_val = day_data.open.parse::<f64>().unwrap_or(0.0);
+                close_val - open_val
+            });
+            let fhigh = day_data.high.parse::<f64>().unwrap_or(0.0);
+            let flow = day_data.low.parse::<f64>().unwrap_or(0.0);
             let rvol = get_realized_vol(&data_up_to_date, RVOLWINDOW);
             let atr = get_avg_true_range(&data_up_to_date, ATRPERIOD);
             let finite_diff = back_finite_diff(&data_up_to_date, 1);
             let linear_reg = linear_regression(&data_up_to_date, data_up_to_date.ohlcv.len() - 1);
-            let fclose: &f64 = &day_data.close.parse::<f64>().unwrap_or(0.0);
-            let fopen: &f64 = &day_data.open.parse::<f64>().unwrap_or(0.0);
-            let fhigh: &f64 = &day_data.high.parse::<f64>().unwrap_or(0.0);
-            let flow: &f64 = &day_data.low.parse::<f64>().unwrap_or(0.0);
+            let finite_diff_linear_reg = linear_regression_of_field(&data_up_to_date, |day_data| back_finite_diff(&TimeSeries {
+                meta_data: t_series.meta_data.clone(),
+                ohlcv: BTreeMap::from([(date.clone(), day_data.clone())]),
+            }, 1));
             writer.write_record(&[
                 &t_series.meta_data.last_refreshed,
                 &date,
@@ -217,12 +265,14 @@ fn tseries_to_csv(t_series: &TimeSeries, filename: &str) -> Result<(), Box<dyn S
                 &day_data.low,
                 &day_data.close,
                 &day_data.volume,
-                &(fclose - fopen).to_string(),
-                &((fclose - fopen) / (fclose)).to_string(),
+                &change.to_string(),
+                &change_linear_reg.to_string(),
+                &((fclose - fopen) / fclose).to_string(),
                 &(fhigh - flow).to_string(),
                 &atr.to_string(),
                 &rvol.to_string(),
                 &finite_diff.to_string(),
+                &finite_diff_linear_reg.to_string(),
                 &linear_reg.to_string(),
             ])?;
         }

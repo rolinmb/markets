@@ -58,7 +58,17 @@ pub fn generate_tseries_plot(ts_csv_name: &str, field: usize) -> Result<()> {
             ", '{}' using \"Date\":\"LinearReg\" with lines title 'Linear Regression'",
             ts_csv_name
         ));
-    }    
+    } else if field == 5 {
+        gnuplot_script.push_str(&format!(
+            ", '{}' using \"Date\":\"ChangeLinearReg\" with lines title 'Linear Regression'",
+            ts_csv_name
+        ));
+    } else if field == 10 {
+        gnuplot_script.push_str(&format!(
+            ", '{}' using \"Date\":\"FiniteDiffLinearReg\" with lienas title 'Linear Regression'",
+            ts_csv_name
+        ));
+    }
     let mut cmd_gnuplot = Command::new("gnuplot")
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
