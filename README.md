@@ -4,6 +4,7 @@ Requires gnuplot to be installed and available from command line.
 
 TODO:
     - add linear regression calculations and charts of non OHLC data
+    - find / calculate other financial metrics using finviz data or other info
     - try to implement simple AI neural net / model to predict next day close price using other time series data after implementing calculations into time series csv generation
 
 src/avantage.rs:
