@@ -256,6 +256,33 @@ pub struct OptionChain {
     pub div_yield: f64,
 }
 
+impl OptionChain {
+    pub fn total_contract_volume(&self) -> f64 {
+        let mut sum = 0.0;
+        for expiry in self.expiries.clone() {
+            for call in expiry.calls {
+                sum += call.vol;
+            }
+            for put in expiry.puts {
+                sum += put.vol;
+            }
+        }
+        sum
+    }
+    pub fn total_open_interest(&self) -> f64 {
+        let mut sum = 0.0;
+        for expiry in self.expiries.clone() {
+            for call in expiry.calls {
+                sum += call.open_int;
+            }
+            for put in expiry.puts {
+                sum += put.open_int;
+            }
+        }
+        sum
+    }
+}
+
 #[tokio::main]
 pub async fn fetch_option_chain(ticker: &str, csv_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let playwright = Playwright::initialize()
@@ -548,7 +575,7 @@ pub fn chain_from_csv(csv_file: &str) -> Result<OptionChain, Box<dyn Error>> {
     Ok(option_chain)
 }
 
-pub fn get_atm_options(chain_csv_name: &str, cp_flag: bool) -> (Option, Option) {
+/*pub fn get_atm_options(chain_csv_name: &str, cp_flag: bool) -> (Option, Option) {
     let chain = match chain_from_csv(chain_csv_name) {
         Ok(c) => c,
         Err(e) => {
@@ -595,4 +622,4 @@ pub fn get_atm_debit_spread(chain_csv_name: &str, cp_flag: bool) -> (f64, Option
     let (otm, itm) = get_atm_options(chain_csv_name, cp_flag);
     let debit_spread_value = otm.last - itm.last;
     (debit_spread_value, otm, itm)
-}
+}*/

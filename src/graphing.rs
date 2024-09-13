@@ -267,7 +267,7 @@ pub fn generate_surface_plot(chain_csv_name: &str, field: usize) -> Result<()> {
     Ok(())
 }
 
-pub fn plot_volatility_smiles(chain_csv_name: &str) -> Result<()> {
+/*pub fn plot_volatility_smiles(chain_csv_name: &str) -> Result<()> {
     let chain = chain_from_csv(chain_csv_name)
         .map_err(|e| anyhow::anyhow!("\nplot_volatility_smiles() :: ERROR -> Failed to load option chain with chain_from_csv: {}", e))?;
     let name_parts: Vec<&str> = chain_csv_name.split('/').collect();
@@ -332,4 +332,4 @@ pub fn plot_volatility_smiles(chain_csv_name: &str) -> Result<()> {
     cmd_call.wait().context("\nplot_volatility_smiles() :: ERROR -> Failed to wait for gnuplot put volatility smile process")?;
     println!("\nplot_volatility_simles() :: Successfully generated {}", put_png_name);
     Ok(())
-}
+}*/

@@ -5,9 +5,9 @@ mod avantage;
 use avantage::{get_underlying_av};
 mod finmath;
 mod options;
-use options::{fetch_option_chain, get_atm_straddle, get_atm_credit_spread, get_atm_debit_spread};
+use options::{fetch_option_chain, chain_from_csv/*, get_atm_straddle, get_atm_credit_spread, get_atm_debit_spread*/};
 mod graphing;
-use graphing::{generate_tseries_plot, generate_surface_plot, plot_volatility_smiles};
+use graphing::{generate_tseries_plot, generate_surface_plot/*, plot_volatility_smiles*/};
 mod utils;
 use utils::{clear_directory_or_create, create_directory_if_dne};
 use std::process::{Command, exit};
@@ -44,7 +44,11 @@ fn main() {
         for plot_field in 0..24 {
             let _ = generate_surface_plot(&oc_csv, plot_field);
         }
-        let _ = plot_volatility_smiles(&oc_csv);
+        let chain = chain_from_csv(&oc_csv).expect("\nmain() :: Failed to load option chain from csv file");
+        let contract_volume = chain.total_contract_volume();
+        let open_interest = chain.total_open_interest();
+        print!("\nmain() :: {} Total Option Contract Volume = {} and Total Open Interest = {}", uticker, contract_volume, open_interest);
+        /*let _ = plot_volatility_smiles(&oc_csv);
         let (straddle_price, atm_call, atm_put) = get_atm_straddle(&oc_csv);
         println!("\nmain() :: {} ATM Straddle: ${} cost (implying underlying moves {}% by nearest expiry date)\nATM Call: {:?}\nATM Put: {:?}\n", uticker, straddle_price, straddle_price*0.85, atm_call, atm_put);
         let (ccredit, itm_call, otm_call) = get_atm_credit_spread(&oc_csv, true);
@@ -54,7 +58,7 @@ fn main() {
         let (cdebit, otm_call, itm_call) = get_atm_debit_spread(&oc_csv, true);
         println!("\nmain() :: Call Debit Spread:\nDebit: ${}\nOTM Call: {:?}\nITM Call: {:?}\n", cdebit, otm_call, itm_call);
         let (pdebit, otm_put, itm_put) = get_atm_debit_spread(&oc_csv, false);
-        println!("\nmain() :: Put Debit Spread:\nDebit: ${}\nOTM Put: {:?}\nITM Put: {:?}\n", pdebit, otm_put, itm_put);
+        println!("\nmain() :: Put Debit Spread:\nDebit: ${}\nOTM Put: {:?}\nITM Put: {:?}\n", pdebit, otm_put, itm_put);*/
         let pdf_cmd = Command::new("cmd")
             .args(["/C", "python", "scripts/main.py", &uticker, &datetime_str])
             .output()
