@@ -1,3 +1,5 @@
+WARNING: NOT A VALID FINANCIAL PREDICTION INSTRUMENT; USE AT YOUR OWN RISK.
+
 Looking at many markets in many ways.
 
 Requires gnuplot to be installed and available from command line.

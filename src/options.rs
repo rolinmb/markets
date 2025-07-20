@@ -6,7 +6,7 @@ use super::utils::str_to_float;
 use std::fs::File;
 use std::error::Error;
 
-const OURLP1: &str = "https://bigcharts.marketwatch.com/quickchart/options.asp?symb=";
+const OURLP1: &str = "youll have to adapt this code to use another option chain source";
 const OURLP2: &str = "&showAll=True";
 //const HTMLDIR: &str = "html_out/";
 
